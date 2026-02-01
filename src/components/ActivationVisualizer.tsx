@@ -1,0 +1,104 @@
+import { useRef, useEffect } from 'react';
+import type { LayerState } from '../nn/NeuralNetwork';
+
+interface ActivationVisualizerProps {
+  layers: LayerState[] | null;
+  width?: number;
+  height?: number;
+}
+
+export function ActivationVisualizer({ layers, width = 300, height = 180 }: ActivationVisualizerProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, width, height);
+
+    if (!layers || layers.length === 0) {
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '12px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No activations yet', width / 2, height / 2);
+      return;
+    }
+
+    const padding = 15;
+    const layerGap = 12;
+    const numLayers = layers.length;
+    const layerHeight = (height - padding * 2 - (numLayers - 1) * layerGap) / numLayers;
+
+    for (let l = 0; l < numLayers; l++) {
+      const layer = layers[l];
+      const activations = layer.activations;
+      const numNeurons = activations.length;
+      const y = padding + l * (layerHeight + layerGap);
+      
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '9px Inter, sans-serif';
+      ctx.textAlign = 'left';
+      const isOutput = l === numLayers - 1;
+      ctx.fillText(isOutput ? `Output (${numNeurons})` : `Layer ${l + 1} (${numNeurons})`, padding, y + 10);
+      
+      const barAreaWidth = width - padding * 2;
+      const maxBars = Math.min(numNeurons, 64);
+      const barWidth = Math.max(2, (barAreaWidth - 60) / maxBars);
+      const barMaxHeight = layerHeight - 15;
+      const startX = padding + 55;
+      
+      let maxAct = 0;
+      for (const a of activations) {
+        maxAct = Math.max(maxAct, Math.abs(a));
+      }
+      if (maxAct === 0) maxAct = 1;
+      
+      for (let n = 0; n < maxBars; n++) {
+        const val = activations[n];
+        const normalized = val / maxAct;
+        const barH = Math.abs(normalized) * barMaxHeight;
+        const x = startX + n * barWidth;
+        const barY = y + 15 + barMaxHeight - barH;
+        
+        if (val > 0) {
+          const intensity = Math.min(1, Math.abs(normalized));
+          ctx.fillStyle = `rgba(99, 222, 255, ${0.3 + intensity * 0.7})`;
+        } else {
+          const intensity = Math.min(1, Math.abs(normalized));
+          ctx.fillStyle = `rgba(255, 99, 132, ${0.3 + intensity * 0.7})`;
+        }
+        
+        ctx.fillRect(x, barY, barWidth - 1, barH);
+      }
+      
+      if (numNeurons > maxBars) {
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '8px Inter, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`+${numNeurons - maxBars}`, startX + maxBars * barWidth + 2, y + layerHeight - 2);
+      }
+    }
+  }, [layers, width, height]);
+
+  return (
+    <div className="activation-visualizer">
+      <div className="panel-header">
+        <span className="panel-icon">⚡</span>
+        <span>Activations</span>
+      </div>
+      <canvas
+        ref={canvasRef}
+        style={{ width, height }}
+        className="activation-canvas"
+      />
+    </div>
+  );
+}
+
+export default ActivationVisualizer;
