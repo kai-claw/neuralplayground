@@ -1,13 +1,34 @@
 {
   "name": "neuralplayground",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
+  "description": "Watch neural networks learn in real-time. Draw digits, train networks, visualize weights and activations interactively.",
+  "homepage": "https://kai-claw.github.io/neuralplayground/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kai-claw/neuralplayground"
+  },
+  "keywords": [
+    "neural-network",
+    "machine-learning",
+    "visualization",
+    "deep-learning",
+    "backpropagation",
+    "digit-recognition",
+    "react",
+    "typescript",
+    "interactive"
+  ],
+  "author": "Christian",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
@@ -27,6 +48,7 @@
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vitest": "^4.0.18"
   }
 }

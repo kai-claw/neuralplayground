@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0e17" />
+  <title>NeuralPlayground</title>
+  <script>
+    // GitHub Pages SPA redirect
+    const path = window.location.pathname;
+    const base = '/neuralplayground/';
+    if (path !== base && path !== base.slice(0, -1)) {
+      window.location.replace(base + '?' + path);
+    }
+  </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0;url=/neuralplayground/" />
+  </noscript>
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>

@@ -2,13 +2,131 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧬</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="NeuralPlayground — Watch neural networks learn in real-time. Draw digits, train networks, visualize weights and activations." />
+    <meta name="description" content="NeuralPlayground — Watch neural networks learn in real-time. Draw digits, train networks, visualize weights and activations interactively." />
+    <meta name="keywords" content="neural network, machine learning, deep learning, visualization, digit recognition, MNIST, backpropagation, activation functions, weight heatmap, interactive" />
+    <meta name="author" content="Christian" />
+    <meta name="theme-color" content="#0a0e17" />
+
     <title>NeuralPlayground — Neural Network Visualizer</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/neuralplayground/favicon.svg" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/neuralplayground/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="NeuralPlayground" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://kai-claw.github.io/neuralplayground/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="NeuralPlayground — Neural Network Visualizer" />
+    <meta property="og:description" content="Watch neural networks learn in real-time. Draw digits, train networks, visualize weights and activations interactively." />
+    <meta property="og:url" content="https://kai-claw.github.io/neuralplayground/" />
+    <meta property="og:site_name" content="NeuralPlayground" />
+    <meta property="og:image" content="https://kai-claw.github.io/neuralplayground/og-image.svg" />
+    <meta property="og:image:alt" content="NeuralPlayground — Neural network diagram with connected layers" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="NeuralPlayground — Neural Network Visualizer" />
+    <meta name="twitter:description" content="Watch neural networks learn in real-time. Draw digits, train networks, visualize weights and activations." />
+    <meta name="twitter:image" content="https://kai-claw.github.io/neuralplayground/og-image.svg" />
+    <meta name="twitter:image:alt" content="NeuralPlayground — Neural network diagram" />
+
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "NeuralPlayground",
+      "description": "Watch neural networks learn in real-time. Draw digits, train networks, visualize weights and activations interactively.",
+      "url": "https://kai-claw.github.io/neuralplayground/",
+      "applicationCategory": "EducationalApplication",
+      "applicationSubCategory": "Machine Learning Visualization",
+      "softwareVersion": "0.1.0",
+      "operatingSystem": "Any",
+      "browserRequirements": "Requires a modern browser with HTML5 Canvas support",
+      "author": { "@type": "Person", "name": "Christian" },
+      "license": "https://opensource.org/licenses/MIT",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "featureList": [
+        "Custom neural network with configurable hidden layers",
+        "Real-time training with live loss & accuracy charts",
+        "Handwritten digit drawing canvas with live predictions",
+        "Network architecture visualization (nodes + weighted connections)",
+        "Per-layer activation bar charts",
+        "Weight heatmap with layer switching",
+        "Xavier weight initialization",
+        "Softmax output with cross-entropy loss",
+        "Support for ReLU, Sigmoid, and Tanh activations"
+      ]
+    }
+    </script>
+
+    <!-- Loading spinner -->
+    <style>
+      .app-loader {
+        position: fixed;
+        inset: 0;
+        background: #0a0e17;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.4s, visibility 0.4s;
+      }
+      .app-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+      .loader-dots { display: flex; gap: 8px; }
+      .loader-dots span {
+        width: 10px; height: 10px; border-radius: 50%;
+        background: #63deff;
+        animation: loaderPulse 1.2s ease-in-out infinite;
+      }
+      .loader-dots span:nth-child(2) { animation-delay: 0.15s; background: #a78bfa; }
+      .loader-dots span:nth-child(3) { animation-delay: 0.3s; background: #10b981; }
+      .loader-label { color: #6b7280; font-family: Inter, sans-serif; font-size: 13px; margin-top: 16px; }
+      @keyframes loaderPulse {
+        0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+        40% { transform: scale(1); opacity: 1; }
+      }
+    </style>
   </head>
   <body>
+    <div class="app-loader" id="app-loader">
+      <div class="loader-dots">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="loader-label">Loading NeuralPlayground…</div>
+    </div>
+    <noscript>
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0e17;color:#e5e7eb;font-family:Inter,sans-serif;text-align:center;padding:2rem;">
+        <div>
+          <h1 style="font-size:1.5rem;margin-bottom:1rem;">🧬 NeuralPlayground</h1>
+          <p>JavaScript is required to run this application.</p>
+        </div>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Fade out loader once React mounts
+      const obs = new MutationObserver(() => {
+        const root = document.getElementById('root');
+        if (root && root.children.length > 0) {
+          document.getElementById('app-loader')?.classList.add('hidden');
+          obs.disconnect();
+        }
+      });
+      obs.observe(document.getElementById('root'), { childList: true });
+    </script>
   </body>
 </html>
