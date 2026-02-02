@@ -826,6 +826,244 @@ button.section-header {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   CREATIVE FEATURES — Signal Flow, Cinematic Demo, Digit Morph
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Experience Panel ─── */
+.experience-panel {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.experience-buttons {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.btn-experience {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-experience:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent-yellow);
+  color: var(--accent-yellow);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.15);
+}
+
+.btn-experience.active {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: var(--accent-yellow);
+  color: var(--accent-yellow);
+  animation: experienceGlow 2s ease-in-out infinite;
+}
+
+@keyframes experienceGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(251, 191, 36, 0.15); }
+  50% { box-shadow: 0 0 16px rgba(251, 191, 36, 0.3); }
+}
+
+/* ─── Cinematic Badge ─── */
+.cinematic-badge {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: rgba(26, 31, 46, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 20px;
+  z-index: 100;
+  animation: cinematicSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cinematicSlideIn {
+  from { opacity: 0; transform: translateY(-16px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cinematic-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-yellow);
+  box-shadow: 0 0 8px var(--accent-yellow);
+  animation: cinematicPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cinematicPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.cinematic-emoji {
+  font-size: 16px;
+}
+
+.cinematic-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-yellow);
+  white-space: nowrap;
+}
+
+.cinematic-progress {
+  width: 60px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.cinematic-progress-fill {
+  height: 100%;
+  background: var(--accent-yellow);
+  border-radius: 2px;
+  transition: width 0.15s ease;
+}
+
+/* ─── Digit Morph Panel ─── */
+.digit-morph {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.morph-slots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.morph-slot-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-width: 72px;
+}
+
+.morph-slot-btn:hover {
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+  transform: translateY(-1px);
+}
+
+.morph-slot-btn.saved {
+  background: rgba(167, 139, 250, 0.1);
+  border: 1px solid var(--accent-purple);
+  border-style: solid;
+  color: var(--accent-purple);
+}
+
+.morph-arrow {
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+.morph-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.morph-canvas {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.morph-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.morph-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-purple);
+  min-width: 14px;
+  text-align: center;
+}
+
+.morph-slider {
+  flex: 1;
+}
+
+.morph-slider::-webkit-slider-thumb {
+  background: var(--accent-purple) !important;
+  box-shadow: 0 2px 8px rgba(167, 139, 250, 0.4) !important;
+}
+
+.morph-slider::-moz-range-thumb {
+  background: var(--accent-purple) !important;
+  box-shadow: 0 2px 8px rgba(167, 139, 250, 0.4) !important;
+}
+
+.morph-value {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.morph-empty {
+  padding: 16px 14px;
+  text-align: center;
+}
+
+.morph-empty p {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ─── Signal Flow — canvas glow overlay ─── */
+.network-visualizer {
+  position: relative;
+}
+
+.network-canvas {
+  /* Ensure particles show with slight glow */
+  image-rendering: auto;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .grid-layout {
@@ -880,5 +1118,26 @@ button.section-header {
 
   .subtitle {
     margin-left: 0;
+  }
+
+  .cinematic-badge {
+    top: auto;
+    bottom: 60px;
+    right: 12px;
+    left: 12px;
+    justify-content: center;
+  }
+
+  .morph-canvas {
+    width: 100px !important;
+    height: 100px !important;
+  }
+
+  .btn-experience {
+    min-height: 44px;
+  }
+
+  .morph-slot-btn {
+    min-height: 44px;
   }
 }
