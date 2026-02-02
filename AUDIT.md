@@ -29,22 +29,30 @@ Vignette overlays, header gradient underline, panel hover depth, stat color-codi
 ### Pass 6: 🔵 Blue Hat — Process & Summary
 Structural integrity tests (directory correctness, feature completeness, import/export hygiene, state consistency, canvas pipeline integrity, component separation of concerns, build/config validation). Comprehensive audit document. README rewrite.
 
+### Pass 7: 🟢 Green Hat #2 — Creative Features
+Three major new features: **Network Dreams** (gradient ascent visualization — run the network backwards to see what it "imagines" each digit looks like), **Neuron Surgery** (freeze/kill individual neurons and watch the network compensate or break), **Training Race** (side-by-side comparison of two networks with different architectures). New `useTrainingRace` hook. Refactored rendering/noise/visualizer utils. 51 new tests.
+
+### Pass 8: 🔵 Black Hat #2 — Re-Audit
+Surgical audit of passes 5–7 code. Found and fixed:
+- **CRITICAL**: `useCinematic.ts` — `setInterval` stored in local variable, not cleaned up on unmount (memory leak). Fixed: stored in `intervalRef`, cleaned up in `clearTimer`.
+- **MODERATE**: `useTrainingRace.ts` — Network weight matrices held in refs after race stop/unmount. Fixed: null out `networkARef`, `networkBRef`, `dataRef` on stop and unmount.
+- **MODERATE**: `NeuronSurgery.tsx` — `hiddenLayers` recomputed as new array every render, causing unnecessary `draw` callback recreation. Fixed: `useMemo`.
+- **MODERATE**: `NeuronSurgery.tsx` — `Math.random()` in connection rendering caused visual flicker on re-render. Fixed: seeded RNG (`mulberry32`) for deterministic connections.
+- 30 new targeted tests covering dream edge cases (0 steps, high LR, all 10 classes, gradient validity), surgery edge cases (out-of-range, kill-all, freeze idempotency, clear masks, survival across training), race logic (winner determination, preset integrity), cleanup verification (interval refs, network cleanup, timer hygiene), and combined dream+surgery scenarios.
+
 ---
 
 ## Quantitative Growth Table
 
-| Metric | Pass 1 | Pass 2 | Pass 3 | Pass 4 | Pass 5 | Pass 6 |
-|--------|--------|--------|--------|--------|--------|--------|
-| **Tests** | 60 | 99 (+39) | 121 (+22) | 121 (+0) | 121 (+0) | **250 (+129)** |
-| **Source Files** | 14 | 16 (+2) | 21 (+5) | 21 (+0) | 21 (+0) | **21 (+0)** |
-| **Components** | 7 | 9 (+2) | 13 (+4) | 13 (+0) | 13 (+0) | **13 (+0)** |
-| **Hooks** | 1 | 1 (+0) | 3 (+2) | 3 (+0) | 3 (+0) | **3 (+0)** |
-| **Source LOC** | ~2,255 | ~2,800 | ~3,600 | ~3,600 | ~3,600 | **~3,600** |
-| **Test LOC** | ~500 | ~980 | ~1,510 | ~1,510 | ~1,510 | **~2,560 (+1,050)** |
-| **CSS LOC** | 661 | ~1,200 | ~1,500 | ~1,700 | ~1,929 | **~1,929** |
-| **TS Errors** | 0 | 0 | 0 | 0 | 0 | **0** |
-| **Build Warnings** | 0 | 0 | 0 | 0 | 0 | **0** |
-| **Bundle JS (gzip)** | 68 KB | ~70 KB | ~75 KB | ~76 KB | ~77 KB | **77 KB** |
+| Metric | Pass 1 | Pass 2 | Pass 3 | Pass 4 | Pass 5 | Pass 6 | Pass 7 | **Pass 8** |
+|--------|--------|--------|--------|--------|--------|--------|--------|------------|
+| **Tests** | 60 | 99 (+39) | 121 (+22) | 121 (+0) | 121 (+0) | 250 (+129) | 301 (+51) | **331 (+30)** |
+| **Source Files** | 14 | 16 (+2) | 21 (+5) | 21 (+0) | 21 (+0) | 21 (+0) | 25 (+4) | **25 (+0)** |
+| **Components** | 7 | 9 (+2) | 13 (+4) | 13 (+0) | 13 (+0) | 13 (+0) | 16 (+3) | **16 (+0)** |
+| **Hooks** | 1 | 1 (+0) | 3 (+2) | 3 (+0) | 3 (+0) | 3 (+0) | 4 (+1) | **4 (+0)** |
+| **Test Files** | 3 | 3 (+0) | 4 (+1) | 4 (+0) | 4 (+0) | 5 (+1) | 6 (+1) | **7 (+1)** |
+| **TS Errors** | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **0** |
+| **Build Warnings** | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **0** |
 
 ---
 

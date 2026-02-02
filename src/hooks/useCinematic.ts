@@ -57,11 +57,16 @@ export function useCinematic({
 
   const activeRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
   }, []);
 
@@ -152,11 +157,14 @@ export function useCinematic({
     initNetwork(config);
     startTraining();
 
-    // Track training progress
+    // Track training progress — store in ref for proper cleanup
     let progressCount = 0;
-    const progressInterval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       if (!activeRef.current) {
-        clearInterval(progressInterval);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
         return;
       }
       progressCount++;
@@ -169,7 +177,10 @@ export function useCinematic({
 
     // After training, start drawing digits
     timerRef.current = setTimeout(() => {
-      clearInterval(progressInterval);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       stopTraining();
       drawDigit(0);
     }, CINEMATIC_TRAIN_EPOCHS * CINEMATIC_EPOCH_INTERVAL);

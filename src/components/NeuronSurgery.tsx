@@ -1,11 +1,11 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import type { LayerState, NeuronStatus } from '../nn/NeuralNetwork';
 import {
   SURGERY_NODE_RADIUS,
   SURGERY_NODE_SPACING,
   SURGERY_MAX_DISPLAY_NEURONS,
 } from '../constants';
-import { getActivationColor } from '../utils';
+import { getActivationColor, mulberry32 } from '../utils';
 
 interface NeuronSurgeryProps {
   layers: LayerState[] | null;
@@ -47,8 +47,8 @@ export function NeuronSurgery({
   const [surgeryCount, setSurgeryCount] = useState({ frozen: 0, killed: 0 });
   const [, setTick] = useState(0); // force re-renders
 
-  // Compute canvas dimensions based on layers
-  const hiddenLayers = layers ? layers.slice(0, -1) : [];
+  // Memoize hidden layers to avoid recreating array every render (stabilizes draw deps)
+  const hiddenLayers = useMemo(() => layers ? layers.slice(0, -1) : [], [layers]);
   const numHiddenLayers = hiddenLayers.length;
   const layerSpacing = 90;
   const canvasWidth = Math.max(280, (numHiddenLayers + 1) * layerSpacing + 40);
@@ -87,11 +87,12 @@ export function NeuronSurgery({
       const prevX = padding + l * layerSpacing;
       const currX = padding + (l + 1) * layerSpacing;
 
-      // Sample connections for visual clarity
+      // Sample connections for visual clarity (seeded RNG for stable rendering)
+      const connRng = mulberry32(l * 1000 + prevCount * 100 + currCount);
       const sampleRate = prevCount * currCount > 60 ? 0.2 : 0.5;
       for (let j = 0; j < currCount; j++) {
         for (let i = 0; i < prevCount; i++) {
-          if (Math.random() > sampleRate && prevCount * currCount > 20) continue;
+          if (connRng() > sampleRate && prevCount * currCount > 20) continue;
           ctx.strokeStyle = 'rgba(75, 85, 99, 0.15)';
           ctx.lineWidth = 0.5;
           ctx.beginPath();

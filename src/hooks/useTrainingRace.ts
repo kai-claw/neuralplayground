@@ -118,6 +118,10 @@ export function useTrainingRace() {
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      // Release network weight matrices on unmount
+      networkARef.current = null;
+      networkBRef.current = null;
+      dataRef.current = null;
     };
   }, []);
 
@@ -188,6 +192,10 @@ export function useTrainingRace() {
 
   const stopRace = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
+    // Release network weight matrices to free memory
+    networkARef.current = null;
+    networkBRef.current = null;
+    dataRef.current = null;
     setRaceState(prev => ({ ...prev, isRacing: false }));
   }, []);
 
