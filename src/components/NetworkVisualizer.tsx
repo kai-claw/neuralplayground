@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
-import type { LayerState } from '../nn/NeuralNetwork';
+import type { LayerState } from '../types';
 import { useContainerDims } from '../hooks/useContainerDims';
 import { getActivationColor, getWeightColor } from '../utils';
 import { computeNodePositions, generateParticles, getLayerSizes } from '../visualizer';

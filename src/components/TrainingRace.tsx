@@ -1,7 +1,8 @@
 import { useRef, useEffect } from 'react';
-import type { TrainingConfig, ActivationFn } from '../nn/NeuralNetwork';
-import { useTrainingRace, RACE_PRESETS } from '../hooks/useTrainingRace';
-import type { RacerConfig, RaceState } from '../hooks/useTrainingRace';
+import type { ActivationFn } from '../types';
+import { useTrainingRace } from '../hooks/useTrainingRace';
+import { RACE_PRESETS } from '../data/racePresets';
+import { drawRaceChart, CHART_WIDTH } from '../renderers/raceChart';
 import { RACE_EPOCHS, RACE_CHART_HEIGHT } from '../constants';
 
 /**
@@ -23,10 +24,25 @@ export function TrainingRace() {
 
   // Draw the race chart
   useEffect(() => {
-    drawRaceChart(chartRef.current, raceState, racerA, racerB);
+    const canvas = chartRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = CHART_WIDTH * dpr;
+    canvas.height = RACE_CHART_HEIGHT * dpr;
+    ctx.scale(dpr, dpr);
+
+    drawRaceChart(ctx, CHART_WIDTH, RACE_CHART_HEIGHT, {
+      accA: raceState.accA,
+      accB: raceState.accB,
+      epoch: raceState.epoch,
+      winner: raceState.winner,
+    }, racerA, racerB);
   }, [raceState, racerA, racerB]);
 
-  const archStr = (config: TrainingConfig) =>
+  const archStr = (config: { learningRate: number; layers: { neurons: number }[] }) =>
     `784→${config.layers.map(l => l.neurons).join('→')}→10 (lr=${config.learningRate})`;
 
   return (
@@ -98,7 +114,7 @@ export function TrainingRace() {
         {/* Race chart */}
         <canvas
           ref={chartRef}
-          style={{ width: 420, height: RACE_CHART_HEIGHT }}
+          style={{ width: CHART_WIDTH, height: RACE_CHART_HEIGHT }}
           className="race-chart-canvas"
           role="img"
           aria-label={raceState.epoch > 0
@@ -135,121 +151,6 @@ export function TrainingRace() {
       </div>
     </div>
   );
-}
-
-/** Pure rendering function for the race chart (no React dependency) */
-function drawRaceChart(
-  canvas: HTMLCanvasElement | null,
-  raceState: RaceState,
-  racerA: RacerConfig,
-  racerB: RacerConfig,
-) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  const width = 420;
-  const height = RACE_CHART_HEIGHT;
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = width * dpr;
-  canvas.height = height * dpr;
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, width, height);
-
-  const pad = { top: 20, right: 50, bottom: 24, left: 40 };
-  const plotW = width - pad.left - pad.right;
-  const plotH = height - pad.top - pad.bottom;
-
-  // Grid
-  ctx.strokeStyle = '#1f2937';
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 4; i++) {
-    const y = pad.top + (plotH / 4) * i;
-    ctx.beginPath();
-    ctx.moveTo(pad.left, y);
-    ctx.lineTo(pad.left + plotW, y);
-    ctx.stroke();
-  }
-
-  const { accA, accB, epoch } = raceState;
-
-  if (accA.length === 0 && accB.length === 0) {
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '12px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Configure networks and click Race!', width / 2, height / 2);
-    return;
-  }
-
-  const maxEpochs = Math.max(accA.length, accB.length, RACE_EPOCHS);
-
-  const drawLine = (data: number[], color: string, maxVal: number) => {
-    if (data.length < 2) return;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let i = 0; i < data.length; i++) {
-      const x = pad.left + (i / Math.max(maxEpochs - 1, 1)) * plotW;
-      const y = pad.top + plotH - (Math.min(data[i], maxVal) / maxVal) * plotH;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-
-    // Area fill
-    ctx.beginPath();
-    for (let i = 0; i < data.length; i++) {
-      const x = pad.left + (i / Math.max(maxEpochs - 1, 1)) * plotW;
-      const y = pad.top + plotH - (Math.min(data[i], maxVal) / maxVal) * plotH;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    const lastX = pad.left + ((data.length - 1) / Math.max(maxEpochs - 1, 1)) * plotW;
-    ctx.lineTo(lastX, pad.top + plotH);
-    ctx.lineTo(pad.left, pad.top + plotH);
-    ctx.closePath();
-    ctx.globalAlpha = 0.06;
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  };
-
-  drawLine(accA, racerA.color, 1);
-  drawLine(accB, racerB.color, 1);
-
-  // Y-axis labels
-  ctx.fillStyle = '#9ca3af';
-  ctx.font = '9px Inter, sans-serif';
-  ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++) {
-    const val = (1 / 4) * (4 - i);
-    const y = pad.top + (plotH / 4) * i;
-    ctx.fillText(`${(val * 100).toFixed(0)}%`, pad.left - 4, y + 3);
-  }
-
-  // Legend
-  ctx.font = 'bold 10px Inter, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillStyle = racerA.color;
-  ctx.fillText(`A: ${accA.length > 0 ? (accA[accA.length - 1] * 100).toFixed(1) : 0}%`, pad.left + 4, pad.top - 6);
-  ctx.fillStyle = racerB.color;
-  ctx.fillText(`B: ${accB.length > 0 ? (accB[accB.length - 1] * 100).toFixed(1) : 0}%`, pad.left + plotW / 2, pad.top - 6);
-
-  // Epoch label
-  ctx.fillStyle = '#6b7280';
-  ctx.font = '9px Inter, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(`Epoch ${epoch}/${RACE_EPOCHS}`, width / 2, height - 4);
-
-  // Winner
-  if (raceState.winner) {
-    ctx.fillStyle = raceState.winner === 'A' ? racerA.color : raceState.winner === 'B' ? racerB.color : '#9ca3af';
-    ctx.font = 'bold 12px Inter, sans-serif';
-    ctx.textAlign = 'right';
-    const label = raceState.winner === 'tie' ? '🤝 Tie!' :
-      `🏆 ${raceState.winner === 'A' ? racerA.name : racerB.name} wins!`;
-    ctx.fillText(label, pad.left + plotW, pad.top - 6);
-  }
 }
 
 export default TrainingRace;

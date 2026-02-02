@@ -17,12 +17,14 @@ import AdversarialLab from './components/AdversarialLab';
 import NeuronSurgery from './components/NeuronSurgery';
 import NetworkDreams from './components/NetworkDreams';
 import TrainingRace from './components/TrainingRace';
+import StatsPanel from './components/StatsPanel';
+import HelpOverlay from './components/HelpOverlay';
+import ExperiencePanel from './components/ExperiencePanel';
 import {
   AUTO_TRAIN_EPOCHS,
   AUTO_TRAIN_DELAY,
   CINEMATIC_EPOCH_INTERVAL,
   CINEMATIC_TRAIN_EPOCHS,
-  SHORTCUTS,
 } from './constants';
 import './App.css';
 
@@ -206,23 +208,10 @@ function App() {
               onReset={handleReset}
             />
 
-            {/* Experience section */}
-            <div className="experience-panel" role="group" aria-label="Experience modes">
-              <div className="panel-header">
-                <span className="panel-icon" aria-hidden="true">✨</span>
-                <span>Experience</span>
-              </div>
-              <div className="experience-buttons">
-                <button
-                  className={`btn btn-experience ${cinematic.active ? 'active' : ''}`}
-                  onClick={startCinematic}
-                  aria-label={cinematic.active ? 'Stop cinematic demo' : 'Start cinematic demo'}
-                  aria-pressed={cinematic.active}
-                >
-                  <span aria-hidden="true">🎬</span> {cinematic.active ? 'Stop Demo' : 'Cinematic'}
-                </button>
-              </div>
-            </div>
+            <ExperiencePanel
+              cinematicActive={cinematic.active}
+              onStartCinematic={startCinematic}
+            />
 
             <div style={livePrediction ? {
               borderRadius: 'var(--radius)',
@@ -265,39 +254,13 @@ function App() {
               predictedLabel={predictedLabel}
             />
             
-            <div className="stats-panel" role="region" aria-label="Training statistics">
-              <div className="panel-header">
-                <span className="panel-icon" aria-hidden="true">📊</span>
-                <span>Statistics</span>
-              </div>
-              <div className="stats-grid">
-                <div className="stat-item">
-                  <span className="stat-number" key={`epoch-${state.epoch}`} style={state.isTraining ? { animation: 'statTick 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)' } : undefined} aria-label={`${state.epoch} epochs`}>{state.epoch}</span>
-                  <span className="stat-desc">Epochs</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-number" aria-label={state.snapshot ? `Loss ${state.snapshot.loss.toFixed(4)}` : 'No loss data'}
-                    style={state.snapshot && state.snapshot.loss < 0.5 ? { color: 'var(--accent-green)' } : undefined}>
-                    {state.snapshot ? state.snapshot.loss.toFixed(4) : '—'}
-                  </span>
-                  <span className="stat-desc">Loss</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-number" aria-label={state.snapshot ? `Accuracy ${(state.snapshot.accuracy * 100).toFixed(1)} percent` : 'No accuracy data'}
-                    style={state.snapshot && state.snapshot.accuracy > 0.8 ? { color: 'var(--accent-green)' } : undefined}>
-                    {state.snapshot ? `${(state.snapshot.accuracy * 100).toFixed(1)}%` : '—'}
-                  </span>
-                  <span className="stat-desc">Accuracy</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-number" aria-label={predictedLabel !== null ? `Predicted digit ${predictedLabel}` : 'No prediction'}
-                    style={predictedLabel !== null ? { color: 'var(--accent-green)', fontSize: '24px' } : undefined}>
-                    {predictedLabel !== null ? predictedLabel : '—'}
-                  </span>
-                  <span className="stat-desc">Prediction</span>
-                </div>
-              </div>
-            </div>
+            <StatsPanel
+              epoch={state.epoch}
+              isTraining={state.isTraining}
+              loss={state.snapshot?.loss ?? null}
+              accuracy={state.snapshot?.accuracy ?? null}
+              predictedLabel={predictedLabel}
+            />
           </div>
         </div>
 
@@ -337,21 +300,7 @@ function App() {
       )}
 
       {/* Help overlay */}
-      {showHelp && (
-        <div className="help-overlay" role="dialog" aria-label="Keyboard shortcuts" onClick={() => setShowHelp(false)}>
-          <div className="help-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="help-header">
-              <h2>Keyboard Shortcuts</h2>
-              <button className="btn-close" onClick={() => setShowHelp(false)} aria-label="Close help">✕</button>
-            </div>
-            <div className="help-list">
-              {SHORTCUTS.map(({ key, description }) => (
-                <div className="help-row" key={key}><kbd>{key}</kbd><span>{description}</span></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
 
       {/* Instructions bar */}
       <div className="instructions-bar" aria-hidden="true">

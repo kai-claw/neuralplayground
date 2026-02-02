@@ -55,7 +55,7 @@ describe('Blue Hat — Directory structure', () => {
     'src/main.tsx',
     'src/types.ts',
     'src/constants.ts',
-    'src/utils.ts',
+    'src/utils/index.ts',
     'src/visualizer.ts',
     'src/noise.ts',
     'src/rendering.ts',
@@ -104,7 +104,7 @@ describe('Blue Hat — Directory structure', () => {
 
   it('has no stray .ts/.tsx files in src root besides known modules', () => {
     const allowed = new Set([
-      'App.tsx', 'main.tsx', 'types.ts', 'constants.ts', 'utils.ts', 'vite-env.d.ts',
+      'App.tsx', 'main.tsx', 'types.ts', 'constants.ts', 'vite-env.d.ts',
       // Architecture modules extracted in pass 6:
       'visualizer.ts',  // Network layout + particle generation (from NetworkVisualizer)
       'noise.ts',       // Noise pattern generation + application (from AdversarialLab)
@@ -114,11 +114,11 @@ describe('Blue Hat — Directory structure', () => {
     expect(rootFiles, `Stray files in src/: ${rootFiles.join(', ')}`).toEqual([]);
   });
 
-  it('components/ contains only .tsx files', () => {
+  it('components/ contains only .tsx and barrel index.ts files', () => {
     const compDir = path.join(SRC, 'components');
     const files = fs.readdirSync(compDir);
-    const nonTsx = files.filter(f => !f.endsWith('.tsx'));
-    expect(nonTsx, `Non-TSX files in components/: ${nonTsx.join(', ')}`).toEqual([]);
+    const nonTsx = files.filter(f => !f.endsWith('.tsx') && f !== 'index.ts');
+    expect(nonTsx, `Unexpected files in components/: ${nonTsx.join(', ')}`).toEqual([]);
   });
 
   it('hooks/ contains only .ts files', () => {
@@ -229,23 +229,27 @@ describe('Blue Hat — Import/export hygiene', () => {
     f => !f.includes('__tests__') && !f.includes('vite-env')
   );
 
-  it('utils.ts — every exported function is imported somewhere in src/', () => {
-    const utilsSrc = fs.readFileSync(path.join(SRC, 'utils.ts'), 'utf-8');
-    const exportedFns = [...utilsSrc.matchAll(/export function (\w+)/g)].map(m => m[1]);
+  it('utils/ barrel — every re-exported function is imported somewhere in src/', () => {
+    // Collect all exported functions from utils sub-modules
+    const utilsDir = path.join(SRC, 'utils');
+    const utilsFiles = fs.readdirSync(utilsDir).filter(f => f.endsWith('.ts') && f !== 'index.ts');
+    const exportedFns: string[] = [];
+    for (const file of utilsFiles) {
+      const src = fs.readFileSync(path.join(utilsDir, file), 'utf-8');
+      const fns = [...src.matchAll(/export function (\w+)/g)].map(m => m[1]);
+      exportedFns.push(...fns);
+    }
 
-    // Read all non-test source files
+    // Read all non-test, non-utils source files
     const allSrc = allTsFiles
-      .filter(f => !f.endsWith('utils.ts'))
+      .filter(f => !f.includes('/utils/'))
       .map(f => fs.readFileSync(f, 'utf-8'))
       .join('\n');
 
     for (const fn of exportedFns) {
-      // safeMax is used internally by softmax in utils.ts itself — that's fine
-      if (fn === 'safeMax') {
-        expect(utilsSrc).toContain(`safeMax(`);
-        continue;
-      }
-      expect(allSrc, `utils.ts exports '${fn}' but it's never imported in src/`).toContain(fn);
+      // safeMax is used internally by softmax in utils/math.ts — that's fine
+      if (fn === 'safeMax') continue;
+      expect(allSrc, `utils/ exports '${fn}' but it's never imported in src/`).toContain(fn);
     }
   });
 
@@ -775,9 +779,13 @@ describe('Blue Hat — Component separation of concerns', () => {
     }
   });
 
-  it('utils.ts has zero React imports (pure functions)', () => {
-    const src = fs.readFileSync(path.join(SRC, 'utils.ts'), 'utf-8');
-    expect(src).not.toContain("from 'react'");
+  it('utils/ modules have zero React imports (pure functions)', () => {
+    const utilsDir = path.join(SRC, 'utils');
+    const utilsFiles = fs.readdirSync(utilsDir).filter(f => f.endsWith('.ts'));
+    for (const file of utilsFiles) {
+      const src = fs.readFileSync(path.join(utilsDir, file), 'utf-8');
+      expect(src, `utils/${file} imports React`).not.toContain("from 'react'");
+    }
   });
 
   it('constants.ts has zero React imports', () => {
@@ -894,7 +902,7 @@ describe('Blue Hat — Architecture validation', () => {
 
   it('all hooks follow use* naming convention', () => {
     const hookDir = path.join(SRC, 'hooks');
-    const files = fs.readdirSync(hookDir).filter(f => f.endsWith('.ts'));
+    const files = fs.readdirSync(hookDir).filter(f => f.endsWith('.ts') && f !== 'index.ts');
 
     for (const file of files) {
       expect(file, `Hook file ${file} doesn't start with 'use'`).toMatch(/^use/);

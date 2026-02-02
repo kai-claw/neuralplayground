@@ -1,3 +1,25 @@
+/**
+ * NeuralNetwork — core feedforward neural network with backpropagation.
+ *
+ * Responsibilities:
+ *   - Weight initialization (Xavier/Glorot)
+ *   - Forward pass with configurable activations
+ *   - Backward pass (SGD)
+ *   - Neuron surgery (freeze/kill individual neurons)
+ *   - Batch training with shuffled mini-batches
+ *   - Prediction with full layer snapshot
+ *
+ * Dream/gradient-ascent functionality is in nn/dreams.ts.
+ */
+
+import type {
+  ActivationFn,
+  NeuronStatus,
+  TrainingConfig,
+  LayerState,
+  TrainingSnapshot,
+  DreamResult,
+} from '../types';
 import {
   activate,
   activateDerivative,
@@ -5,37 +27,10 @@ import {
   xavierInit,
   argmax,
 } from '../utils';
-
-export type ActivationFn = 'relu' | 'sigmoid' | 'tanh';
-
-/** Neuron surgery status */
-export type NeuronStatus = 'active' | 'frozen' | 'killed';
-
-export interface LayerConfig {
-  neurons: number;
-  activation: ActivationFn;
-}
-
-export interface TrainingConfig {
-  learningRate: number;
-  layers: LayerConfig[];
-}
-
-export interface LayerState {
-  weights: number[][];
-  biases: number[];
-  preActivations: number[];
-  activations: number[];
-}
-
-export interface TrainingSnapshot {
-  epoch: number;
-  loss: number;
-  accuracy: number;
-  layers: LayerState[];
-  predictions: number[];
-  outputProbabilities: number[];
-}
+import {
+  computeInputGradient as _computeInputGradient,
+  dream as _dream,
+} from './dreams';
 
 export class NeuralNetwork {
   private layers: LayerState[] = [];
@@ -76,6 +71,18 @@ export class NeuralNetwork {
   getConfig(): TrainingConfig {
     return this.config;
   }
+
+  // ─── Layer access (for dreams module) ────────────────────────────
+
+  getLayers(): LayerState[] {
+    return this.layers;
+  }
+
+  getNeuronMasks(): Map<string, NeuronStatus> {
+    return this.neuronMasks;
+  }
+
+  // ─── Weight initialization ───────────────────────────────────────
 
   private initializeWeights(inputSize: number) {
     this.layers = [];
@@ -120,6 +127,8 @@ export class NeuralNetwork {
     });
   }
 
+  // ─── Forward pass ────────────────────────────────────────────────
+
   forward(input: number[]): number[] {
     let current = input;
     
@@ -136,7 +145,7 @@ export class NeuralNetwork {
         for (let i = 0; i < current.length; i++) {
           sum += layer.weights[j][i] * current[i];
         }
-        // NaN/Infinity guard — clamp to safe range
+        // NaN/Infinity guard
         if (!isFinite(sum)) sum = 0;
         preAct.push(sum);
         act.push(isOutput ? sum : activate(sum, activation as ActivationFn));
@@ -147,7 +156,7 @@ export class NeuralNetwork {
       if (isOutput) {
         layer.activations = softmax(preAct);
       } else {
-        // Apply neuron surgery masks — killed neurons output zero
+        // Apply neuron surgery masks
         for (let j = 0; j < act.length; j++) {
           if (this.neuronMasks.get(`${l}-${j}`) === 'killed') {
             act[j] = 0;
@@ -162,6 +171,8 @@ export class NeuralNetwork {
     return current;
   }
 
+  // ─── Backward pass ───────────────────────────────────────────────
+
   private backward(input: number[], target: number[]): void {
     const lr = this.config.learningRate;
     const numLayers = this.layers.length;
@@ -174,7 +185,6 @@ export class NeuralNetwork {
       const prevActivations = l > 0 ? this.layers[l - 1].activations : input;
       
       for (let j = 0; j < layer.weights.length; j++) {
-        // Neuron surgery: skip weight updates for frozen/killed neurons
         const status = this.neuronMasks.get(`${l}-${j}`);
         if (status === 'frozen' || status === 'killed') continue;
 
@@ -208,6 +218,8 @@ export class NeuralNetwork {
     }
   }
 
+  // ─── Training ────────────────────────────────────────────────────
+
   trainBatch(inputs: number[][], labels: number[]): TrainingSnapshot {
     let totalLoss = 0;
     let correct = 0;
@@ -231,7 +243,7 @@ export class NeuralNetwork {
       lastProbs = output;
       
       const loss = -Math.log(Math.max(output[label], 1e-10));
-      totalLoss += isFinite(loss) ? loss : 10; // cap degenerate loss
+      totalLoss += isFinite(loss) ? loss : 10;
       
       const predicted = argmax(output);
       if (predicted === label) correct++;
@@ -249,16 +261,13 @@ export class NeuralNetwork {
       epoch: this.epoch,
       loss: avgLoss,
       accuracy,
-      layers: this.layers.map(l => ({
-        weights: l.weights.map(w => [...w]),
-        biases: [...l.biases],
-        preActivations: [...l.preActivations],
-        activations: [...l.activations],
-      })),
+      layers: this.snapshotLayers(),
       predictions: lastProbs.map((_, i) => i === argmax(lastProbs) ? 1 : 0),
       outputProbabilities: lastProbs,
     };
   }
+
+  // ─── Prediction ──────────────────────────────────────────────────
 
   predict(input: number[]): { label: number; probabilities: number[]; layers: LayerState[] } {
     const output = this.forward(input);
@@ -266,105 +275,39 @@ export class NeuralNetwork {
     return {
       label,
       probabilities: output,
-      layers: this.layers.map(l => ({
-        weights: l.weights.map(w => [...w]),
-        biases: [...l.biases],
-        preActivations: [...l.preActivations],
-        activations: [...l.activations],
-      })),
+      layers: this.snapshotLayers(),
     };
   }
 
-  // ─── Network Dreams — gradient ascent on input space ──────────────
+  // ─── Snapshot helpers ────────────────────────────────────────────
 
-  /**
-   * Compute the gradient of output[targetClass] with respect to the input.
-   * Used for "Network Dreams" — gradient ascent to visualize what the
-   * network imagines for each digit.
-   */
-  computeInputGradient(input: number[], targetClass: number): number[] {
-    // Forward pass to populate layer states
-    this.forward(input);
-
-    const numLayers = this.layers.length;
-
-    // Output layer delta: gradient of cross-entropy w.r.t. logits
-    // We want to MAXIMIZE output[targetClass], so delta = target - output
-    const outputLayer = this.layers[numLayers - 1];
-    let deltas: number[] = outputLayer.activations.map((a, i) =>
-      (i === targetClass ? 1 : 0) - a
-    );
-
-    // Backpropagate through hidden layers to get input gradient
-    for (let l = numLayers - 1; l >= 1; l--) {
-      const layer = this.layers[l];
-      const prevLayer = this.layers[l - 1];
-      const activation = this.config.layers[l - 1]?.activation || 'relu';
-      const newDeltas = new Array(prevLayer.weights.length).fill(0);
-
-      for (let i = 0; i < prevLayer.weights.length; i++) {
-        let sum = 0;
-        for (let j = 0; j < layer.weights.length; j++) {
-          sum += layer.weights[j][i] * deltas[j];
-        }
-        const d = sum * activateDerivative(
-          prevLayer.preActivations[i],
-          activation as ActivationFn,
-        );
-        newDeltas[i] = isFinite(d) ? d : 0;
-      }
-      deltas = newDeltas;
-    }
-
-    // Final step: gradient w.r.t. input
-    const firstLayer = this.layers[0];
-    const inputGradient = new Array(input.length).fill(0);
-    for (let i = 0; i < input.length; i++) {
-      let sum = 0;
-      for (let j = 0; j < firstLayer.weights.length; j++) {
-        sum += firstLayer.weights[j][i] * deltas[j];
-      }
-      inputGradient[i] = isFinite(sum) ? sum : 0;
-    }
-
-    return inputGradient;
+  /** Deep-copy all layers for safe external consumption */
+  snapshotLayers(): LayerState[] {
+    return this.layers.map(l => ({
+      weights: l.weights.map(w => [...w]),
+      biases: [...l.biases],
+      preActivations: [...l.preActivations],
+      activations: [...l.activations],
+    }));
   }
 
-  /**
-   * Run gradient ascent to "dream" what input produces a target digit.
-   * Returns the optimized input image and confidence history.
-   */
+  // ─── Dream delegation (implementation in nn/dreams.ts) ──────────
+  //     Thin wrappers for backward compatibility with existing API.
+
+  computeInputGradient(input: number[], targetClass: number): number[] {
+    return _computeInputGradient(this, input, targetClass);
+  }
+
   dream(
     targetClass: number,
     steps: number = 100,
     lr: number = 0.5,
     startImage?: number[],
-  ): { image: number[]; confidenceHistory: number[] } {
-    const size = this.layers[0].weights[0]?.length || 784;
-    let image = startImage
-      ? [...startImage]
-      : Array.from({ length: size }, () => Math.random() * 0.3 + 0.1);
-
-    const confidenceHistory: number[] = [];
-
-    for (let step = 0; step < steps; step++) {
-      const output = this.forward(image);
-      confidenceHistory.push(output[targetClass]);
-
-      const gradient = this.computeInputGradient(image, targetClass);
-
-      // Gradient ascent with L2 regularization for cleaner images
-      for (let i = 0; i < image.length; i++) {
-        image[i] += lr * gradient[i] - 0.001 * image[i];
-        image[i] = Math.max(0, Math.min(1, image[i]));
-      }
-
-      // Decay learning rate slightly
-      lr *= 0.998;
-    }
-
-    return { image, confidenceHistory };
+  ): DreamResult {
+    return _dream(this, targetClass, steps, lr, startImage);
   }
+
+  // ─── Accessors ───────────────────────────────────────────────────
 
   getLossHistory(): number[] { return [...this.lossHistory]; }
   getAccuracyHistory(): number[] { return [...this.accuracyHistory]; }

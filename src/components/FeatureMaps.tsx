@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import type { LayerState } from '../nn/NeuralNetwork';
+import type { LayerState } from '../types';
 import { weightsToImageData } from '../rendering';
 import {
   FEATURE_MAP_CELL_SIZE,

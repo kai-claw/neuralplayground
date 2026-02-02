@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import type { LayerState } from '../nn/NeuralNetwork';
+import type { LayerState } from '../types';
 import { useContainerDims } from '../hooks/useContainerDims';
 import { ACTIVATION_VIS_DEFAULT, ACTIVATION_VIS_ASPECT } from '../constants';
 

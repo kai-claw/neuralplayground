@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { TrainingConfig, LayerConfig, ActivationFn } from '../nn/NeuralNetwork';
+import type { TrainingConfig, LayerConfig, ActivationFn } from '../types';
 import { NEURON_OPTIONS, MAX_HIDDEN_LAYERS } from '../constants';
 
 interface ControlPanelProps {

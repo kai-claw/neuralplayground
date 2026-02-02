@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { NeuralNetwork } from '../nn/NeuralNetwork';
-import type { TrainingConfig, TrainingSnapshot, LayerConfig, NeuronStatus } from '../nn/NeuralNetwork';
+import { computeInputGradient, dream as networkDream } from '../nn/dreams';
+import type { TrainingConfig, TrainingSnapshot, LayerConfig, NeuronStatus, DreamResult } from '../types';
 import { generateTrainingData } from '../nn/sampleData';
 import { DEFAULT_CONFIG, DEFAULT_SAMPLES_PER_DIGIT, TRAINING_STEP_INTERVAL } from '../constants';
 
@@ -123,11 +124,11 @@ export function useNeuralNetwork() {
     networkRef.current.clearAllMasks();
   }, []);
 
-  // ─── Network Dreams API ──────────────────────────────────────────
+  // ─── Network Dreams API (delegates to nn/dreams.ts) ───────────────
 
-  const computeInputGradient = useCallback((input: number[], targetClass: number): number[] | null => {
+  const computeGradient = useCallback((input: number[], targetClass: number): number[] | null => {
     if (!networkRef.current) return null;
-    return networkRef.current.computeInputGradient(input, targetClass);
+    return computeInputGradient(networkRef.current, input, targetClass);
   }, []);
 
   const dream = useCallback((
@@ -135,9 +136,9 @@ export function useNeuralNetwork() {
     steps?: number,
     lr?: number,
     startImage?: number[],
-  ) => {
+  ): DreamResult | null => {
     if (!networkRef.current) return null;
-    return networkRef.current.dream(targetClass, steps, lr, startImage);
+    return networkDream(networkRef.current, targetClass, steps, lr, startImage);
   }, []);
 
   return {
@@ -151,7 +152,7 @@ export function useNeuralNetwork() {
     setNeuronStatus,
     getNeuronStatus,
     clearNeuronMasks,
-    computeInputGradient,
+    computeInputGradient: computeGradient,
     dream,
   };
 }

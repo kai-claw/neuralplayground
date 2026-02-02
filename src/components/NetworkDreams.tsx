@@ -6,6 +6,7 @@ import {
   DREAM_ANIMATION_INTERVAL,
   INPUT_DIM,
 } from '../constants';
+import { renderDreamImage, renderDreamGallery, GALLERY_DIMS } from '../renderers/dreamRenderer';
 
 interface NetworkDreamsProps {
   /** Dream function from the neural network */
@@ -57,30 +58,7 @@ export function NetworkDreams({ onDream, hasTrained }: NetworkDreamsProps) {
     canvas.height = DREAM_DISPLAY_SIZE * dpr;
     ctx.scale(dpr, dpr);
 
-    const scale = DREAM_DISPLAY_SIZE / INPUT_DIM;
-    for (let y = 0; y < INPUT_DIM; y++) {
-      for (let x = 0; x < INPUT_DIM; x++) {
-        const v = Math.round((dreamImage[y * INPUT_DIM + x] || 0) * 255);
-        // Colorize: higher values get a cyan tint
-        const r = Math.round(v * 0.4);
-        const g = Math.round(v * 0.87);
-        const b = v;
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-        ctx.fillRect(x * scale, y * scale, scale + 0.5, scale + 0.5);
-      }
-    }
-
-    // Overlay step/confidence
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(0, DREAM_DISPLAY_SIZE - 22, DREAM_DISPLAY_SIZE, 22);
-    ctx.fillStyle = '#63deff';
-    ctx.font = 'bold 10px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(
-      `Step ${dreamStep}/${DREAM_STEPS} — ${(dreamConfidence * 100).toFixed(1)}%`,
-      DREAM_DISPLAY_SIZE / 2,
-      DREAM_DISPLAY_SIZE - 7,
-    );
+    renderDreamImage(ctx, dreamImage, DREAM_DISPLAY_SIZE, dreamStep, dreamConfidence);
   }, [dreamImage, dreamStep, dreamConfidence]);
 
   // Render gallery of all-digit dreams
@@ -90,53 +68,12 @@ export function NetworkDreams({ onDream, hasTrained }: NetworkDreamsProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const cellSize = 40;
-    const gap = 4;
-    const cols = 5;
-    const rows = 2;
-    const totalW = cols * (cellSize + gap) - gap;
-    const totalH = rows * (cellSize + gap + 14) - gap;
-
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = totalW * dpr;
-    canvas.height = totalH * dpr;
+    canvas.width = GALLERY_DIMS.width * dpr;
+    canvas.height = GALLERY_DIMS.height * dpr;
     ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, totalW, totalH);
 
-    for (let d = 0; d < 10; d++) {
-      const col = d % cols;
-      const row = Math.floor(d / cols);
-      const x = col * (cellSize + gap);
-      const y = row * (cellSize + gap + 14);
-
-      // Label
-      ctx.fillStyle = '#9ca3af';
-      ctx.font = '10px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(String(d), x + cellSize / 2, y + 10);
-
-      const img = gallery[d];
-      if (img) {
-        const scale = cellSize / INPUT_DIM;
-        for (let py = 0; py < INPUT_DIM; py++) {
-          for (let px = 0; px < INPUT_DIM; px++) {
-            const v = Math.round((img[py * INPUT_DIM + px] || 0) * 255);
-            const r = Math.round(v * 0.4);
-            const g = Math.round(v * 0.87);
-            const b = v;
-            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-            ctx.fillRect(x + px * scale, y + 12 + py * scale, scale + 0.5, scale + 0.5);
-          }
-        }
-      } else {
-        ctx.fillStyle = '#1f2937';
-        ctx.fillRect(x, y + 12, cellSize, cellSize);
-        ctx.fillStyle = '#4b5563';
-        ctx.font = '18px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('?', x + cellSize / 2, y + 12 + cellSize / 2 + 6);
-      }
-    }
+    renderDreamGallery(ctx, gallery);
   }, [gallery]);
 
   const startDream = useCallback(() => {
@@ -285,7 +222,7 @@ export function NetworkDreams({ onDream, hasTrained }: NetworkDreamsProps) {
             <div className="dreams-gallery-label">Dream Gallery</div>
             <canvas
               ref={galleryCanvasRef}
-              style={{ width: 5 * 44 - 4, height: 2 * 58 - 4 }}
+              style={{ width: GALLERY_DIMS.width, height: GALLERY_DIMS.height }}
               className="dreams-gallery-canvas"
               role="img"
               aria-label={`Gallery of dreamed digits — ${gallery.filter(Boolean).length}/10 generated`}

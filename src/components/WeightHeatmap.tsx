@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import type { LayerState } from '../nn/NeuralNetwork';
+import type { LayerState } from '../types';
 
 interface WeightHeatmapProps {
   layers: LayerState[] | null;

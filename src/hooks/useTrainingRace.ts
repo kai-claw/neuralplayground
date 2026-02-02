@@ -1,7 +1,12 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { NeuralNetwork } from '../nn/NeuralNetwork';
-import type { TrainingConfig, ActivationFn } from '../nn/NeuralNetwork';
+import type { TrainingConfig, ActivationFn } from '../types';
 import { generateTrainingData } from '../nn/sampleData';
+import {
+  DEFAULT_RACER_A_CONFIG,
+  DEFAULT_RACER_B_CONFIG,
+} from '../data/racePresets';
+import type { RacePreset } from '../data/racePresets';
 import {
   RACE_EPOCHS,
   RACE_STEP_INTERVAL,
@@ -27,75 +32,14 @@ export interface RaceState {
 const DEFAULT_RACER_A: RacerConfig = {
   name: 'Network A',
   color: '#63deff',
-  config: {
-    learningRate: 0.01,
-    layers: [
-      { neurons: 64, activation: 'relu' },
-      { neurons: 32, activation: 'relu' },
-    ],
-  },
+  config: DEFAULT_RACER_A_CONFIG,
 };
 
 const DEFAULT_RACER_B: RacerConfig = {
   name: 'Network B',
   color: '#f59e0b',
-  config: {
-    learningRate: 0.01,
-    layers: [
-      { neurons: 32, activation: 'sigmoid' },
-    ],
-  },
+  config: DEFAULT_RACER_B_CONFIG,
 };
-
-export const RACE_PRESETS: { label: string; a: TrainingConfig; b: TrainingConfig }[] = [
-  {
-    label: 'Deep vs Shallow',
-    a: {
-      learningRate: 0.01,
-      layers: [
-        { neurons: 64, activation: 'relu' },
-        { neurons: 32, activation: 'relu' },
-      ],
-    },
-    b: {
-      learningRate: 0.01,
-      layers: [{ neurons: 32, activation: 'relu' }],
-    },
-  },
-  {
-    label: 'ReLU vs Sigmoid',
-    a: {
-      learningRate: 0.01,
-      layers: [{ neurons: 64, activation: 'relu' }],
-    },
-    b: {
-      learningRate: 0.01,
-      layers: [{ neurons: 64, activation: 'sigmoid' }],
-    },
-  },
-  {
-    label: 'Fast vs Slow LR',
-    a: {
-      learningRate: 0.05,
-      layers: [{ neurons: 32, activation: 'relu' }],
-    },
-    b: {
-      learningRate: 0.005,
-      layers: [{ neurons: 32, activation: 'relu' }],
-    },
-  },
-  {
-    label: 'Wide vs Narrow',
-    a: {
-      learningRate: 0.01,
-      layers: [{ neurons: 128, activation: 'relu' }],
-    },
-    b: {
-      learningRate: 0.01,
-      layers: [{ neurons: 16, activation: 'relu' }],
-    },
-  },
-];
 
 export function useTrainingRace() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -199,7 +143,7 @@ export function useTrainingRace() {
     setRaceState(prev => ({ ...prev, isRacing: false }));
   }, []);
 
-  const applyPreset = useCallback((preset: typeof RACE_PRESETS[number]) => {
+  const applyPreset = useCallback((preset: RacePreset) => {
     if (raceState.isRacing) return;
     setRacerA(prev => ({ ...prev, config: preset.a }));
     setRacerB(prev => ({ ...prev, config: preset.b }));

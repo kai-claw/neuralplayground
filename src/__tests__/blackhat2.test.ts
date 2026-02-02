@@ -314,9 +314,9 @@ describe('Black Hat #2 — Cleanup verification (code audit)', () => {
     expect(src).toContain('useMemo(() => layers');
   });
 
-  it('NeuronSurgery uses seeded RNG for connection rendering (no Math.random in draw)', () => {
+  it('Surgery renderer uses seeded RNG for connection rendering (no Math.random in draw)', () => {
     const src = fs.readFileSync(
-      path.join(SRC, 'components', 'NeuronSurgery.tsx'), 'utf-8'
+      path.join(SRC, 'renderers', 'surgeryRenderer.ts'), 'utf-8'
     );
     // draw function should use mulberry32, not Math.random
     expect(src).toContain('mulberry32');
@@ -446,7 +446,7 @@ describe('Black Hat #2 — Dream + Surgery combined', () => {
 
 describe('Black Hat #2 — Race presets integrity', () => {
   it('all RACE_PRESETS have valid configs', async () => {
-    const { RACE_PRESETS } = await import('../hooks/useTrainingRace');
+    const { RACE_PRESETS } = await import('../data/racePresets');
     expect(RACE_PRESETS.length).toBeGreaterThan(0);
 
     for (const preset of RACE_PRESETS) {
@@ -464,7 +464,7 @@ describe('Black Hat #2 — Race presets integrity', () => {
   });
 
   it('each RACE_PRESET creates trainable networks', async () => {
-    const { RACE_PRESETS } = await import('../hooks/useTrainingRace');
+    const { RACE_PRESETS } = await import('../data/racePresets');
     const data = generateTrainingData(5);
 
     for (const preset of RACE_PRESETS) {

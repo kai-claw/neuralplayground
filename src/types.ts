@@ -1,19 +1,51 @@
 /**
  * Shared type definitions for NeuralPlayground.
  *
- * Canonical source for all types used across modules.
- * NeuralNetwork.ts re-exports its own types; everything else imports from here or nn/.
+ * ═══════════════════════════════════════════════════════════════════
+ * CANONICAL SOURCE OF TRUTH for all types used across modules.
+ * Every module imports types from here — no circular re-exports.
+ * ═══════════════════════════════════════════════════════════════════
  */
 
-// Re-export neural network types for convenient access
-export type {
-  ActivationFn,
-  NeuronStatus,
-  LayerConfig,
-  TrainingConfig,
-  LayerState,
-  TrainingSnapshot,
-} from './nn/NeuralNetwork';
+// ─── Neural network types ────────────────────────────────────────────
+
+/** Supported activation functions */
+export type ActivationFn = 'relu' | 'sigmoid' | 'tanh';
+
+/** Neuron surgery status */
+export type NeuronStatus = 'active' | 'frozen' | 'killed';
+
+/** Configuration for a single hidden layer */
+export interface LayerConfig {
+  neurons: number;
+  activation: ActivationFn;
+}
+
+/** Full training configuration */
+export interface TrainingConfig {
+  learningRate: number;
+  layers: LayerConfig[];
+}
+
+/** Runtime state of a single layer (weights + activations) */
+export interface LayerState {
+  weights: number[][];
+  biases: number[];
+  preActivations: number[];
+  activations: number[];
+}
+
+/** Snapshot of the network after a training epoch */
+export interface TrainingSnapshot {
+  epoch: number;
+  loss: number;
+  accuracy: number;
+  layers: LayerState[];
+  predictions: number[];
+  outputProbabilities: number[];
+}
+
+// ─── Application types ───────────────────────────────────────────────
 
 /** Cinematic demo phase */
 export type CinematicPhase = 'training' | 'drawing' | 'predicting';
@@ -25,4 +57,10 @@ export type NoiseType = 'gaussian' | 'salt-pepper' | 'adversarial';
 export interface Dimensions {
   width: number;
   height: number;
+}
+
+/** Dream result from gradient ascent */
+export interface DreamResult {
+  image: number[];
+  confidenceHistory: number[];
 }
