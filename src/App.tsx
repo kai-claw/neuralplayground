@@ -11,6 +11,8 @@ import ControlPanel from './components/ControlPanel';
 import WeightPanel from './components/WeightPanel';
 import CinematicBadge from './components/CinematicBadge';
 import DigitMorph from './components/DigitMorph';
+import FeatureMaps from './components/FeatureMaps';
+import AdversarialLab from './components/AdversarialLab';
 import { DIGIT_STROKES, getDigitDrawDuration } from './data/digitStrokes';
 import './App.css';
 
@@ -53,8 +55,12 @@ function App() {
   const [morphSlotA, setMorphSlotA] = useState<number[] | null>(null);
   const [morphSlotB, setMorphSlotB] = useState<number[] | null>(null);
 
+  // Adversarial lab — track current drawing as pixel array
+  const [currentDrawingInput, setCurrentDrawingInput] = useState<number[] | null>(null);
+
   const handleDraw = useCallback((imageData: ImageData) => {
     const input = canvasToInput(imageData);
+    setCurrentDrawingInput(input);
     const result = predict(input);
     if (result) {
       setLivePrediction(result.probabilities);
@@ -77,6 +83,7 @@ function App() {
     setLivePrediction(null);
     setPredictedLabel(null);
     setPredictionLayers(null);
+    setCurrentDrawingInput(null);
   }, [initNetwork, state.config]);
 
   // ─── Save morph slot from current drawing ───
@@ -92,6 +99,16 @@ function App() {
 
   // ─── Morph predict handler ───
   const handleMorphPredict = useCallback((input: number[]) => {
+    const result = predict(input);
+    if (result) {
+      setLivePrediction(result.probabilities);
+      setPredictedLabel(result.label);
+      setPredictionLayers(result.layers);
+    }
+  }, [predict]);
+
+  // ─── Adversarial lab predict handler ───
+  const handleAdversarialPredict = useCallback((input: number[]) => {
     const result = predict(input);
     if (result) {
       setLivePrediction(result.probabilities);
@@ -329,6 +346,7 @@ function App() {
               lossHistory={state.lossHistory}
               accuracyHistory={state.accuracyHistory}
             />
+            <FeatureMaps layers={displayLayers} />
           </div>
 
           <div className="column column-right">
@@ -342,6 +360,13 @@ function App() {
               slotB={morphSlotB}
               onMorphPredict={handleMorphPredict}
               onSaveSlot={handleSaveMorphSlot}
+            />
+
+            <AdversarialLab
+              currentInput={currentDrawingInput}
+              onPredict={handleAdversarialPredict}
+              probabilities={livePrediction}
+              predictedLabel={predictedLabel}
             />
             
             <div className="stats-panel" role="region" aria-label="Training statistics">

@@ -1064,6 +1064,333 @@ button.section-header {
   image-rendering: auto;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   GREEN HAT — Feature Maps & Adversarial Lab
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Feature Maps Panel ─── */
+.feature-maps {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.feature-maps-content {
+  padding: 12px 14px;
+}
+
+.feature-maps-grid-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.feature-maps-canvas {
+  border-radius: var(--radius-sm);
+  cursor: crosshair;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.feature-maps-magnifier {
+  flex-shrink: 0;
+  animation: magAppear 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes magAppear {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.feature-maps-mag-canvas {
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--accent-blue);
+  box-shadow: 0 0 20px rgba(99, 222, 255, 0.2);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.feature-maps-hint {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.feature-maps-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.legend-item {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.legend-cyan {
+  color: var(--accent-blue);
+}
+
+.legend-red {
+  color: var(--accent-red);
+}
+
+.feature-maps-empty {
+  padding: 20px 14px;
+  text-align: center;
+}
+
+.feature-maps-empty p {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ─── Adversarial Lab Panel ─── */
+.adversarial-lab {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.adversarial-content {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.adversarial-preview {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.adversarial-canvas {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.adversarial-flip-badge {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  background: rgba(255, 99, 132, 0.9);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 12px;
+  white-space: nowrap;
+  animation: flipBadgePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 16px rgba(255, 99, 132, 0.5);
+}
+
+@keyframes flipBadgePop {
+  from { opacity: 0; transform: translateX(-50%) scale(0.7); }
+  to { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+.adversarial-type-selector {
+  display: flex;
+  gap: 6px;
+}
+
+.adversarial-type-btn {
+  flex: 1;
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
+}
+
+.adversarial-type-btn:hover {
+  color: var(--text-secondary);
+  border-color: var(--text-muted);
+  transform: translateY(-1px);
+}
+
+.adversarial-type-btn.active {
+  background: rgba(255, 99, 132, 0.1);
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+  box-shadow: 0 0 8px rgba(255, 99, 132, 0.15);
+}
+
+.adversarial-target {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.adversarial-target-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.adversarial-target-digits {
+  display: flex;
+  gap: 4px;
+}
+
+.target-digit-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.target-digit-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+  transform: translateY(-1px);
+}
+
+.target-digit-btn.active {
+  background: rgba(167, 139, 250, 0.15);
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.2);
+}
+
+.adversarial-slider-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.adversarial-slider::-webkit-slider-thumb {
+  background: var(--accent-red) !important;
+  box-shadow: 0 2px 8px rgba(255, 99, 132, 0.4) !important;
+}
+
+.adversarial-slider::-moz-range-thumb {
+  background: var(--accent-red) !important;
+  box-shadow: 0 2px 8px rgba(255, 99, 132, 0.4) !important;
+}
+
+.adversarial-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.control-value.warning {
+  color: var(--accent-yellow);
+}
+
+.control-value.danger {
+  color: var(--accent-red);
+}
+
+.adversarial-reseed {
+  width: 100%;
+  justify-content: center;
+  font-size: 12px;
+}
+
+/* Confidence meter */
+.adversarial-confidence {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.confidence-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.confidence-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.confidence-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-green);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s ease;
+}
+
+.confidence-value.flipped {
+  color: var(--accent-red);
+}
+
+.confidence-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.confidence-fill.flipped {
+  background: linear-gradient(90deg, var(--accent-red), var(--accent-yellow));
+}
+
+.confidence-drop {
+  font-size: 10px;
+  color: var(--accent-red);
+  font-weight: 600;
+  text-align: center;
+  animation: dropFade 0.3s ease;
+}
+
+@keyframes dropFade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.adversarial-empty {
+  padding: 20px 14px;
+  text-align: center;
+}
+
+.adversarial-empty p {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .grid-layout {
