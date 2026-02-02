@@ -19,6 +19,7 @@ import './App.css';
 /** Cinematic demo constants */
 const CINEMATIC_TRAIN_EPOCHS = 30;
 const CINEMATIC_PREDICT_DWELL = 1800; // ms to show prediction before next digit
+const AUTO_TRAIN_EPOCHS = 15; // auto-train on first load for instant wow
 
 function App() {
   const {
@@ -35,6 +36,9 @@ function App() {
   const [predictedLabel, setPredictedLabel] = useState<number | null>(null);
   const [predictionLayers, setPredictionLayers] = useState<NonNullable<typeof state.snapshot>['layers'] | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+
+  // Auto-start flag
+  const autoStartedRef = useRef(false);
 
   // Signal flow animation trigger
   const [signalFlowTrigger, setSignalFlowTrigger] = useState(0);
@@ -254,6 +258,23 @@ function App() {
     };
   }, []);
 
+  // ─── Auto-start training on first load for instant wow ───
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    // Small delay so the UI renders first
+    const timer = setTimeout(() => {
+      initNetwork(state.config);
+      startTraining();
+      // Auto-stop after N epochs
+      setTimeout(() => {
+        stopTraining();
+      }, AUTO_TRAIN_EPOCHS * 80);
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -296,6 +317,7 @@ function App() {
         <div className="logo">
           <span className="logo-icon" aria-hidden="true">🧬</span>
           <h1>NeuralPlayground</h1>
+          <span className={`heartbeat-dot ${state.isTraining ? 'active' : state.epoch > 0 ? 'idle' : 'off'}`} aria-hidden="true" title={state.isTraining ? 'Training…' : state.epoch > 0 ? 'Paused' : 'Not started'} />
         </div>
         <p className="subtitle">Watch neural networks learn in real-time</p>
       </header>
@@ -447,6 +469,8 @@ function App() {
       </div>
 
       <footer className="app-footer">
+        <span className="footer-version">v1.0.0</span>
+        <span className="footer-dot" aria-hidden="true">·</span>
         <span>NeuralPlayground — Custom neural network with real-time visualization</span>
         <span className="footer-dot" aria-hidden="true">·</span>
         <a href="https://github.com/kai-claw/neuralplayground" target="_blank" rel="noopener noreferrer">
