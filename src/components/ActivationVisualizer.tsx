@@ -1,5 +1,7 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import type { LayerState } from '../nn/NeuralNetwork';
+import { useContainerDims } from '../hooks/useContainerDims';
+import { ACTIVATION_VIS_DEFAULT, ACTIVATION_VIS_ASPECT } from '../constants';
 
 interface ActivationVisualizerProps {
   layers: LayerState[] | null;
@@ -9,23 +11,13 @@ interface ActivationVisualizerProps {
 
 export function ActivationVisualizer({ layers, width: propWidth, height: propHeight }: ActivationVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dims, setDims] = useState({ width: propWidth || 320, height: propHeight || 280 });
-
-  useEffect(() => {
-    if (propWidth && propHeight) {
-      setDims({ width: propWidth, height: propHeight });
-      return;
-    }
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0].contentRect.width;
-      if (w > 0) setDims({ width: w, height: Math.round(w * 0.875) });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [propWidth, propHeight]);
+  const { containerRef, dims } = useContainerDims({
+    propWidth,
+    propHeight,
+    defaultWidth: ACTIVATION_VIS_DEFAULT.width,
+    defaultHeight: ACTIVATION_VIS_DEFAULT.height,
+    aspectRatio: ACTIVATION_VIS_ASPECT,
+  });
 
   const { width, height } = dims;
 

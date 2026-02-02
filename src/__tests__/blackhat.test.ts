@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { NeuralNetwork, type TrainingConfig, type ActivationFn } from '../nn/NeuralNetwork';
+import { NeuralNetwork, type ActivationFn } from '../nn/NeuralNetwork';
 import { generateTrainingData, canvasToInput } from '../nn/sampleData';
 
 // ─── NaN / Infinity Stability Guards ──────────────────────────────

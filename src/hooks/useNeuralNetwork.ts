@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { NeuralNetwork } from '../nn/NeuralNetwork';
 import type { TrainingConfig, TrainingSnapshot, LayerConfig } from '../nn/NeuralNetwork';
 import { generateTrainingData } from '../nn/sampleData';
+import { DEFAULT_CONFIG, DEFAULT_SAMPLES_PER_DIGIT, TRAINING_STEP_INTERVAL } from '../constants';
 
 export interface NetworkState {
   isTraining: boolean;
@@ -11,14 +12,6 @@ export interface NetworkState {
   epoch: number;
   config: TrainingConfig;
 }
-
-const defaultConfig: TrainingConfig = {
-  learningRate: 0.01,
-  layers: [
-    { neurons: 64, activation: 'relu' },
-    { neurons: 32, activation: 'relu' },
-  ],
-};
 
 export function useNeuralNetwork() {
   const networkRef = useRef<NeuralNetwork | null>(null);
@@ -30,7 +23,7 @@ export function useNeuralNetwork() {
     lossHistory: [],
     accuracyHistory: [],
     epoch: 0,
-    config: defaultConfig,
+    config: DEFAULT_CONFIG,
   });
 
   // BUG FIX: Clean up training timer on unmount to prevent memory leak
@@ -65,7 +58,7 @@ export function useNeuralNetwork() {
     trainingRef.current = true;
     setState(prev => ({ ...prev, isTraining: true }));
     
-    const data = customData || generateTrainingData(20);
+    const data = customData || generateTrainingData(DEFAULT_SAMPLES_PER_DIGIT);
     
     const step = () => {
       if (!trainingRef.current || !networkRef.current) return;
@@ -81,7 +74,7 @@ export function useNeuralNetwork() {
       }));
       
       if (trainingRef.current) {
-        timerRef.current = setTimeout(step, 60);
+        timerRef.current = setTimeout(step, TRAINING_STEP_INTERVAL);
       }
     };
     

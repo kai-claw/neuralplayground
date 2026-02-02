@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { LayerState } from '../nn/NeuralNetwork';
 import WeightHeatmap from './WeightHeatmap';
 
@@ -10,13 +10,7 @@ export function WeightPanel({ layers }: WeightPanelProps) {
   const [selectedLayer, setSelectedLayer] = useState(0);
   const numLayers = layers?.length || 0;
 
-  // BUG FIX: Clamp selectedLayer when layers shrink (e.g. user reconfigures architecture)
-  useEffect(() => {
-    if (numLayers > 0 && selectedLayer >= numLayers) {
-      setSelectedLayer(numLayers - 1);
-    }
-  }, [numLayers, selectedLayer]);
-
+  // Derived safe index — no effect needed (computed from props + state)
   const safeSelected = numLayers > 0 ? Math.min(selectedLayer, numLayers - 1) : 0;
 
   return (

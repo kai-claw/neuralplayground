@@ -1,5 +1,18 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import type { LayerState } from '../nn/NeuralNetwork';
+import { useContainerDims } from '../hooks/useContainerDims';
+import { getActivationColor, getWeightColor } from '../utils';
+import {
+  VIS_PADDING,
+  VIS_MAX_DISPLAYED_NODES,
+  VIS_NODE_SPACING_MAX,
+  SIGNAL_LAYER_DELAY,
+  SIGNAL_PARTICLE_SPEED_MIN,
+  SIGNAL_PARTICLE_SPEED_RANGE,
+  SIGNAL_WEIGHT_THRESHOLD,
+  NETWORK_VIS_DEFAULT,
+  NETWORK_VIS_ASPECT,
+} from '../constants';
 
 interface NetworkVisualizerProps {
   layers: LayerState[] | null;
@@ -8,25 +21,6 @@ interface NetworkVisualizerProps {
   height?: number;
   /** Increment to trigger a signal flow animation */
   signalFlowTrigger?: number;
-}
-
-function getColor(value: number, alpha = 1): string {
-  if (value > 0) {
-    const intensity = Math.min(1, Math.abs(value));
-    return `rgba(99, 222, 255, ${intensity * alpha})`;
-  } else {
-    const intensity = Math.min(1, Math.abs(value));
-    return `rgba(255, 99, 132, ${intensity * alpha})`;
-  }
-}
-
-function getWeightColor(value: number): string {
-  const clamped = Math.max(-1, Math.min(1, value));
-  if (clamped > 0) {
-    return `rgba(99, 222, 255, ${Math.abs(clamped) * 0.6})`;
-  } else {
-    return `rgba(255, 99, 132, ${Math.abs(clamped) * 0.6})`;
-  }
 }
 
 /* ── Signal flow particle types ── */
@@ -65,9 +59,9 @@ function computeNodePositions(
 
   for (let l = 0; l < numLayers; l++) {
     const nodes: NodePos[] = [];
-    const numNodes = Math.min(layerSizes[l], 16);
+    const numNodes = Math.min(layerSizes[l], VIS_MAX_DISPLAYED_NODES);
     const maxH = height - padding * 2;
-    const nodeSpacing = Math.min(maxH / (numNodes + 1), 25);
+    const nodeSpacing = Math.min(maxH / (numNodes + 1), VIS_NODE_SPACING_MAX);
     const startY = height / 2 - (numNodes - 1) * nodeSpacing / 2;
 
     for (let n = 0; n < numNodes; n++) {
@@ -77,7 +71,7 @@ function computeNodePositions(
       });
     }
     // "+N" overflow node
-    if (layerSizes[l] > 16) {
+    if (layerSizes[l] > VIS_MAX_DISPLAYED_NODES) {
       nodes.push({
         x: padding + l * layerSpacing,
         y: startY + numNodes * nodeSpacing,
@@ -96,14 +90,14 @@ function generateParticles(
 ): Particle[] {
   const particles: Particle[] = [];
   const numLayers = nodePositions.length;
-  const LAYER_DELAY = 0.35; // seconds between each layer's particles starting
+  const truncatedMax = VIS_MAX_DISPLAYED_NODES - 1; // visible node count when truncated
 
   for (let l = 1; l < numLayers; l++) {
     const prevNodes = nodePositions[l - 1];
     const currNodes = nodePositions[l];
     const layer = layers[l - 1];
-    const maxPrev = Math.min(prevNodes.length, layerSizes[l - 1] > 16 ? 15 : prevNodes.length);
-    const maxCurr = Math.min(currNodes.length, layerSizes[l] > 16 ? 15 : currNodes.length);
+    const maxPrev = Math.min(prevNodes.length, layerSizes[l - 1] > VIS_MAX_DISPLAYED_NODES ? truncatedMax : prevNodes.length);
+    const maxCurr = Math.min(currNodes.length, layerSizes[l] > VIS_MAX_DISPLAYED_NODES ? truncatedMax : currNodes.length);
 
     // Only sample a subset of connections for visual clarity
     const sampleRate = maxPrev * maxCurr > 100 ? 0.3 : maxPrev * maxCurr > 40 ? 0.5 : 1.0;
@@ -115,7 +109,7 @@ function generateParticles(
 
         const weight = layer.weights[j][i];
         const absW = Math.abs(weight);
-        if (absW < 0.05) continue; // skip near-zero connections
+        if (absW < SIGNAL_WEIGHT_THRESHOLD) continue;
 
         const activation = layer.activations[j] || 0;
         const isPositive = activation >= 0;
@@ -126,14 +120,14 @@ function generateParticles(
           toX: currNodes[j].x,
           toY: currNodes[j].y,
           progress: 0,
-          speed: 1.8 + Math.random() * 0.8, // 1.8-2.6x per second
+          speed: SIGNAL_PARTICLE_SPEED_MIN + Math.random() * SIGNAL_PARTICLE_SPEED_RANGE,
           r: isPositive ? 99 : 255,
           g: isPositive ? 222 : 99,
           b: isPositive ? 255 : 132,
           alpha: 0.4 + absW * 0.6,
           size: 1.5 + absW * 2.5,
           layerIdx: l - 1,
-          delay: (l - 1) * LAYER_DELAY + Math.random() * 0.1,
+          delay: (l - 1) * SIGNAL_LAYER_DELAY + Math.random() * 0.1,
           alive: true,
         });
       }
@@ -153,8 +147,13 @@ export function NetworkVisualizer({
   signalFlowTrigger = 0,
 }: NetworkVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dims, setDims] = useState({ width: propWidth || 620, height: propHeight || 420 });
+  const { containerRef, dims } = useContainerDims({
+    propWidth,
+    propHeight,
+    defaultWidth: NETWORK_VIS_DEFAULT.width,
+    defaultHeight: NETWORK_VIS_DEFAULT.height,
+    aspectRatio: NETWORK_VIS_ASPECT,
+  });
 
   // Signal flow state (refs to avoid re-renders during animation)
   const particlesRef = useRef<Particle[]>([]);
@@ -163,21 +162,6 @@ export function NetworkVisualizer({
   const lastTriggerRef = useRef(0);
   // Store node glow state for arrival effects
   const nodeGlowRef = useRef<Map<string, number>>(new Map());
-
-  useEffect(() => {
-    if (propWidth && propHeight) {
-      setDims({ width: propWidth, height: propHeight });
-      return;
-    }
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0].contentRect.width;
-      if (w > 0) setDims({ width: w, height: Math.round(w * 0.68) });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [propWidth, propHeight]);
 
   const { width, height } = dims;
 
@@ -191,8 +175,8 @@ export function NetworkVisualizer({
       const prevNodes = nodePositions[l - 1];
       const currNodes = nodePositions[l];
       const layer = layers[l - 1];
-      const maxPrev = Math.min(prevNodes.length, layerSizes[l - 1] > 16 ? 15 : prevNodes.length);
-      const maxCurr = Math.min(currNodes.length, layerSizes[l] > 16 ? 15 : currNodes.length);
+      const maxPrev = Math.min(prevNodes.length, layerSizes[l - 1] > VIS_MAX_DISPLAYED_NODES ? VIS_MAX_DISPLAYED_NODES - 1 : prevNodes.length);
+      const maxCurr = Math.min(currNodes.length, layerSizes[l] > VIS_MAX_DISPLAYED_NODES ? VIS_MAX_DISPLAYED_NODES - 1 : currNodes.length);
 
       for (let j = 0; j < maxCurr; j++) {
         for (let i = 0; i < maxPrev; i++) {
@@ -218,13 +202,13 @@ export function NetworkVisualizer({
 
       for (let n = 0; n < nodes.length; n++) {
         const { x, y } = nodes[n];
-        const isTruncated = layerSizes[l] > 16 && n === nodes.length - 1;
+        const isTruncated = layerSizes[l] > VIS_MAX_DISPLAYED_NODES && n === nodes.length - 1;
 
         if (isTruncated) {
           ctx.fillStyle = '#6b7280';
           ctx.font = '12px Inter, sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(`+${layerSizes[l] - 16}`, x, y + 4);
+          ctx.fillText(`+${layerSizes[l] - VIS_MAX_DISPLAYED_NODES}`, x, y + 4);
           continue;
         }
 
@@ -263,7 +247,7 @@ export function NetworkVisualizer({
 
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = isInput ? '#374151' : getColor(activation, 0.8);
+        ctx.fillStyle = isInput ? '#374151' : getActivationColor(activation, 0.8);
         ctx.fill();
         ctx.strokeStyle = '#4b5563';
         ctx.lineWidth = 1;
@@ -296,9 +280,8 @@ export function NetworkVisualizer({
       ctx.fillStyle = '#9ca3af';
       ctx.font = '11px Inter, sans-serif';
       ctx.textAlign = 'center';
-      const padding = 50;
-      const layerSpacing = (width - padding * 2) / (numLayers - 1);
-      const labelX = padding + l * layerSpacing;
+      const layerSpacing = (width - VIS_PADDING * 2) / (numLayers - 1);
+      const labelX = VIS_PADDING + l * layerSpacing;
 
       if (isInput) ctx.fillText('Input', labelX, labelY);
       else if (isOutput) ctx.fillText('Output', labelX, labelY);
@@ -397,8 +380,7 @@ export function NetworkVisualizer({
     }
 
     const layerSizes = [Math.min(inputSize, 20), ...layers.map(l => l.activations.length)];
-    const padding = 50;
-    const nodePositions = computeNodePositions(layerSizes, width, height, padding);
+    const nodePositions = computeNodePositions(layerSizes, width, height, VIS_PADDING);
     drawStatic(ctx, nodePositions, layerSizes);
   }, [layers, inputSize, width, height, drawStatic]);
 
@@ -409,8 +391,7 @@ export function NetworkVisualizer({
     lastTriggerRef.current = signalFlowTrigger;
 
     const layerSizes = [Math.min(inputSize, 20), ...layers.map(l => l.activations.length)];
-    const padding = 50;
-    const nodePositions = computeNodePositions(layerSizes, width, height, padding);
+    const nodePositions = computeNodePositions(layerSizes, width, height, VIS_PADDING);
 
     // Generate particles
     particlesRef.current = generateParticles(nodePositions, layerSizes, layers);

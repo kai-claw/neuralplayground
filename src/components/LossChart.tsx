@@ -1,4 +1,6 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
+import { useContainerDims } from '../hooks/useContainerDims';
+import { LOSS_CHART_DEFAULT, LOSS_CHART_ASPECT, COLOR_CYAN_HEX, COLOR_RED_HEX } from '../constants';
 
 interface LossChartProps {
   lossHistory: number[];
@@ -9,23 +11,13 @@ interface LossChartProps {
 
 export function LossChart({ lossHistory, accuracyHistory, width: propWidth, height: propHeight }: LossChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dims, setDims] = useState({ width: propWidth || 620, height: propHeight || 220 });
-
-  useEffect(() => {
-    if (propWidth && propHeight) {
-      setDims({ width: propWidth, height: propHeight });
-      return;
-    }
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0].contentRect.width;
-      if (w > 0) setDims({ width: w, height: Math.round(w * 0.355) });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [propWidth, propHeight]);
+  const { containerRef, dims } = useContainerDims({
+    propWidth,
+    propHeight,
+    defaultWidth: LOSS_CHART_DEFAULT.width,
+    defaultHeight: LOSS_CHART_DEFAULT.height,
+    aspectRatio: LOSS_CHART_ASPECT,
+  });
 
   const { width, height } = dims;
 
@@ -122,8 +114,8 @@ export function LossChart({ lossHistory, accuracyHistory, width: propWidth, heig
     for (let i = 0; i < lossHistory.length; i++) {
       if (lossHistory[i] > maxLoss) maxLoss = lossHistory[i];
     }
-    drawLine(lossHistory, maxLoss, '#ff6384', 'Loss', false);
-    drawLine(accuracyHistory, 1, '#63deff', 'Accuracy', true);
+    drawLine(lossHistory, maxLoss, COLOR_RED_HEX, 'Loss', false);
+    drawLine(accuracyHistory, 1, COLOR_CYAN_HEX, 'Accuracy', true);
 
     // Current values in header
     if (lossHistory.length > 0) {
@@ -133,9 +125,9 @@ export function LossChart({ lossHistory, accuracyHistory, width: propWidth, heig
       ctx.font = 'bold 11px Inter, sans-serif';
       ctx.textAlign = 'center';
       
-      ctx.fillStyle = '#ff6384';
+      ctx.fillStyle = COLOR_RED_HEX;
       ctx.fillText(`Loss: ${lastLoss.toFixed(4)}`, width / 3, pad.top - 8);
-      ctx.fillStyle = '#63deff';
+      ctx.fillStyle = COLOR_CYAN_HEX;
       ctx.fillText(`Acc: ${(lastAcc * 100).toFixed(1)}%`, (2 * width) / 3, pad.top - 8);
     }
 

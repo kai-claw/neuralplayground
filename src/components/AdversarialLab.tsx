@@ -1,4 +1,14 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { mulberry32, gaussianNoise } from '../utils';
+import type { NoiseType } from '../types';
+import {
+  ADVERSARIAL_DISPLAY_SIZE,
+  ADVERSARIAL_DEFAULT_SEED,
+  ADVERSARIAL_DEFAULT_TARGET,
+  INPUT_DIM,
+  NOISE_LABELS,
+  NOISE_DESCRIPTIONS,
+} from '../constants';
 
 interface AdversarialLabProps {
   /** Current drawing as 784-element pixel array (28×28, values 0-1) */
@@ -11,44 +21,8 @@ interface AdversarialLabProps {
   predictedLabel: number | null;
 }
 
-const DISPLAY_SIZE = 160;
-const INPUT_DIM = 28;
-
-/** Seeded PRNG for reproducible noise patterns */
-function mulberry32(seed: number): () => number {
-  return () => {
-    seed |= 0;
-    seed = (seed + 0x6D2B79F5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** Box-Muller transform for gaussian noise */
-function gaussianNoise(rng: () => number): number {
-  const u1 = Math.max(1e-10, rng());
-  const u2 = rng();
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
-
 // Pre-allocated noise pattern (regenerated on seed change)
 const NOISE_PATTERN = new Float32Array(INPUT_DIM * INPUT_DIM);
-
-/** Noise type options */
-type NoiseType = 'gaussian' | 'salt-pepper' | 'adversarial';
-
-const NOISE_LABELS: Record<NoiseType, string> = {
-  gaussian: '🌊 Gaussian',
-  'salt-pepper': '🧂 Salt & Pepper',
-  adversarial: '🎯 Targeted',
-};
-
-const NOISE_DESCRIPTIONS: Record<NoiseType, string> = {
-  gaussian: 'Random bell-curve noise — like TV static',
-  'salt-pepper': 'Random black & white pixel flips',
-  adversarial: 'Push the prediction toward a target digit',
-};
 
 /**
  * Adversarial Noise Lab — gradually corrupt a drawing and watch the
@@ -68,16 +42,9 @@ export function AdversarialLab({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [noiseLevel, setNoiseLevel] = useState(0);
   const [noiseType, setNoiseType] = useState<NoiseType>('gaussian');
-  const [noiseSeed, setNoiseSeed] = useState(42);
-  const [targetDigit, setTargetDigit] = useState(3);
+  const [noiseSeed, setNoiseSeed] = useState(ADVERSARIAL_DEFAULT_SEED);
+  const [targetDigit, setTargetDigit] = useState(ADVERSARIAL_DEFAULT_TARGET);
   const [originalLabel, setOriginalLabel] = useState<number | null>(null);
-
-  // Track original prediction when input arrives
-  useEffect(() => {
-    if (predictedLabel !== null && noiseLevel === 0) {
-      setOriginalLabel(predictedLabel);
-    }
-  }, [predictedLabel, noiseLevel]);
 
   // Generate noise pattern and render noised image
   useEffect(() => {
@@ -88,8 +55,8 @@ export function AdversarialLab({
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = DISPLAY_SIZE * dpr;
-    canvas.height = DISPLAY_SIZE * dpr;
+    canvas.width = ADVERSARIAL_DISPLAY_SIZE * dpr;
+    canvas.height = ADVERSARIAL_DISPLAY_SIZE * dpr;
     ctx.scale(dpr, dpr);
 
     // Generate reproducible noise
@@ -143,7 +110,7 @@ export function AdversarialLab({
     }
 
     // Render
-    const scale = DISPLAY_SIZE / INPUT_DIM;
+    const scale = ADVERSARIAL_DISPLAY_SIZE / INPUT_DIM;
     for (let y = 0; y < INPUT_DIM; y++) {
       for (let x = 0; x < INPUT_DIM; x++) {
         const v = Math.round(noised[y * INPUT_DIM + x] * 255);
@@ -155,11 +122,11 @@ export function AdversarialLab({
     // Noise level overlay
     if (noiseLevel > 0) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(0, DISPLAY_SIZE - 20, DISPLAY_SIZE, 20);
+      ctx.fillRect(0, ADVERSARIAL_DISPLAY_SIZE - 20, ADVERSARIAL_DISPLAY_SIZE, 20);
       ctx.fillStyle = noiseLevel < 0.3 ? '#10b981' : noiseLevel < 0.6 ? '#fbbf24' : '#ff6384';
       ctx.font = 'bold 10px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`Noise: ${(noiseLevel * 100).toFixed(0)}%`, DISPLAY_SIZE / 2, DISPLAY_SIZE - 6);
+      ctx.fillText(`Noise: ${(noiseLevel * 100).toFixed(0)}%`, ADVERSARIAL_DISPLAY_SIZE / 2, ADVERSARIAL_DISPLAY_SIZE - 6);
     }
 
     // Fire prediction with noised input
@@ -167,8 +134,17 @@ export function AdversarialLab({
   }, [currentInput, noiseLevel, noiseType, noiseSeed, targetDigit, onPredict]);
 
   const handleNoiseSlider = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setNoiseLevel(parseFloat(e.target.value));
-  }, []);
+    const newLevel = parseFloat(e.target.value);
+    // Snapshot original label when noise is first applied
+    if (noiseLevel === 0 && newLevel > 0 && predictedLabel !== null) {
+      setOriginalLabel(predictedLabel);
+    }
+    // Reset original label when noise returns to zero
+    if (newLevel === 0 && predictedLabel !== null) {
+      setOriginalLabel(predictedLabel);
+    }
+    setNoiseLevel(newLevel);
+  }, [noiseLevel, predictedLabel]);
 
   const handleNewSeed = useCallback(() => {
     setNoiseSeed(prev => prev + 1);
@@ -206,7 +182,7 @@ export function AdversarialLab({
         <div className="adversarial-preview">
           <canvas
             ref={canvasRef}
-            style={{ width: DISPLAY_SIZE, height: DISPLAY_SIZE }}
+            style={{ width: ADVERSARIAL_DISPLAY_SIZE, height: ADVERSARIAL_DISPLAY_SIZE }}
             className="adversarial-canvas"
             role="img"
             aria-label={`Drawing with ${(noiseLevel * 100).toFixed(0)}% ${noiseType} noise applied`}

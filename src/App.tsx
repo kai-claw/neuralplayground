@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNeuralNetwork } from './hooks/useNeuralNetwork';
+import { useCinematic } from './hooks/useCinematic';
 import { canvasToInput } from './nn/sampleData';
 import DrawingCanvas from './components/DrawingCanvas';
 import type { DrawingCanvasHandle } from './components/DrawingCanvas';
@@ -13,13 +14,14 @@ import CinematicBadge from './components/CinematicBadge';
 import DigitMorph from './components/DigitMorph';
 import FeatureMaps from './components/FeatureMaps';
 import AdversarialLab from './components/AdversarialLab';
-import { DIGIT_STROKES, getDigitDrawDuration } from './data/digitStrokes';
+import {
+  AUTO_TRAIN_EPOCHS,
+  AUTO_TRAIN_DELAY,
+  CINEMATIC_EPOCH_INTERVAL,
+  CINEMATIC_TRAIN_EPOCHS,
+  SHORTCUTS,
+} from './constants';
 import './App.css';
-
-/** Cinematic demo constants */
-const CINEMATIC_TRAIN_EPOCHS = 30;
-const CINEMATIC_PREDICT_DWELL = 1800; // ms to show prediction before next digit
-const AUTO_TRAIN_EPOCHS = 15; // auto-train on first load for instant wow
 
 function App() {
   const {
@@ -43,15 +45,6 @@ function App() {
   // Signal flow animation trigger
   const [signalFlowTrigger, setSignalFlowTrigger] = useState(0);
 
-  // Cinematic demo mode
-  const [cinematicActive, setCinematicActive] = useState(false);
-  const [cinematicPhase, setCinematicPhase] = useState<'training' | 'drawing' | 'predicting'>('training');
-  const [cinematicDigit, setCinematicDigit] = useState(0);
-  const [cinematicProgress, setCinematicProgress] = useState(0);
-  const [cinematicEpoch, setCinematicEpoch] = useState(0);
-  const cinematicRef = useRef(false);
-  const cinematicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // Drawing canvas ref for programmatic drawing
   const drawingCanvasRef = useRef<DrawingCanvasHandle>(null);
 
@@ -62,6 +55,16 @@ function App() {
   // Adversarial lab — track current drawing as pixel array
   const [currentDrawingInput, setCurrentDrawingInput] = useState<number[] | null>(null);
 
+  // ─── Cinematic demo (extracted hook) ───
+  const { cinematic, startCinematic, stopCinematic } = useCinematic({
+    config: state.config,
+    initNetwork,
+    startTraining,
+    stopTraining,
+    drawingCanvasRef,
+    onSignalFlow: () => setSignalFlowTrigger(prev => prev + 1),
+  });
+
   const handleDraw = useCallback((imageData: ImageData) => {
     const input = canvasToInput(imageData);
     setCurrentDrawingInput(input);
@@ -70,7 +73,6 @@ function App() {
       setLivePrediction(result.probabilities);
       setPredictedLabel(result.label);
       setPredictionLayers(result.layers);
-      // Trigger signal flow animation
       setSignalFlowTrigger(prev => prev + 1);
     }
   }, [predict]);
@@ -121,156 +123,15 @@ function App() {
     }
   }, [predict]);
 
-  // ─── Cinematic Demo Mode ───
-  const stopCinematic = useCallback(() => {
-    cinematicRef.current = false;
-    setCinematicActive(false);
-    if (cinematicTimerRef.current) clearTimeout(cinematicTimerRef.current);
-  }, []);
-
-  const startCinematic = useCallback(() => {
-    if (cinematicRef.current) {
-      stopCinematic();
-      return;
-    }
-    cinematicRef.current = true;
-    setCinematicActive(true);
-    setCinematicPhase('training');
-    setCinematicEpoch(0);
-    setCinematicProgress(0);
-    setCinematicDigit(0);
-
-    // Stop any existing training
-    stopTraining();
-
-    // Phase 1: Train for N epochs
-    initNetwork(state.config);
-    let epochCount = 0;
-
-    const trainStep = () => {
-      if (!cinematicRef.current) return;
-      epochCount++;
-      setCinematicEpoch(epochCount);
-      setCinematicProgress(epochCount / CINEMATIC_TRAIN_EPOCHS);
-
-      if (epochCount < CINEMATIC_TRAIN_EPOCHS) {
-        startTraining();
-        // Training runs on a timer internally; we just need to track epochs
-        // Instead, let's do manual epoch tracking via state updates
-        cinematicTimerRef.current = setTimeout(trainStep, 80);
-      } else {
-        // Training phase done — move to drawing phase
-        stopTraining();
-        cinematicTimerRef.current = setTimeout(() => drawDigit(0), 500);
-      }
-    };
-
-    // Start training — the hook handles the actual training loop
-    startTraining();
-    cinematicTimerRef.current = setTimeout(() => {
-      stopTraining();
-      drawDigit(0);
-    }, CINEMATIC_TRAIN_EPOCHS * 80);
-
-    // Track training progress
-    let progressInterval: ReturnType<typeof setInterval> | null = null;
-    progressInterval = setInterval(() => {
-      if (!cinematicRef.current) {
-        if (progressInterval) clearInterval(progressInterval);
-        return;
-      }
-      // Use actual epoch from state
-      setCinematicEpoch(prev => Math.min(prev + 1, CINEMATIC_TRAIN_EPOCHS));
-      setCinematicProgress(prev => Math.min(prev + 1 / CINEMATIC_TRAIN_EPOCHS, 1));
-    }, 80);
-
-    // Phase 2: Auto-draw digits
-    const drawDigit = (digit: number) => {
-      if (!cinematicRef.current) return;
-      setCinematicPhase('drawing');
-      setCinematicDigit(digit);
-      setCinematicProgress(0);
-
-      const handle = drawingCanvasRef.current;
-      if (!handle) {
-        cinematicTimerRef.current = setTimeout(() => drawDigit((digit + 1) % 10), 1000);
-        return;
-      }
-
-      handle.clear();
-      const strokes = DIGIT_STROKES[digit];
-      let totalPoints = 0;
-      for (const s of strokes) totalPoints += s.points.length;
-      const duration = getDigitDrawDuration(digit);
-      const pointDelay = duration / totalPoints;
-
-      let strokeIdx = 0;
-      let pointIdx = 0;
-      let pointsDrawn = 0;
-
-      const drawStep = () => {
-        if (!cinematicRef.current) return;
-        if (strokeIdx >= strokes.length) {
-          // Drawing done — show prediction
-          setCinematicPhase('predicting');
-          setCinematicProgress(1);
-          setSignalFlowTrigger(prev => prev + 1);
-
-          cinematicTimerRef.current = setTimeout(() => {
-            if (!cinematicRef.current) return;
-            const nextDigit = (digit + 1) % 10;
-            drawDigit(nextDigit);
-          }, CINEMATIC_PREDICT_DWELL);
-          return;
-        }
-
-        const stroke = strokes[strokeIdx];
-        const pt = stroke.points[pointIdx];
-
-        if (pointIdx === 0) {
-          handle.drawDot(pt.x, pt.y);
-        } else {
-          const prev = stroke.points[pointIdx - 1];
-          handle.drawStroke(prev.x, prev.y, pt.x, pt.y);
-        }
-
-        pointsDrawn++;
-        setCinematicProgress(pointsDrawn / totalPoints);
-        pointIdx++;
-
-        if (pointIdx >= stroke.points.length) {
-          strokeIdx++;
-          pointIdx = 0;
-        }
-
-        cinematicTimerRef.current = setTimeout(drawStep, pointDelay);
-      };
-
-      cinematicTimerRef.current = setTimeout(drawStep, 200);
-    };
-  }, [state.config, initNetwork, startTraining, stopTraining, stopCinematic, predict]);
-
-  // Cleanup cinematic on unmount
-  useEffect(() => {
-    return () => {
-      cinematicRef.current = false;
-      if (cinematicTimerRef.current) clearTimeout(cinematicTimerRef.current);
-    };
-  }, []);
-
   // ─── Auto-start training on first load for instant wow ───
   useEffect(() => {
     if (autoStartedRef.current) return;
     autoStartedRef.current = true;
-    // Small delay so the UI renders first
     const timer = setTimeout(() => {
       initNetwork(state.config);
       startTraining();
-      // Auto-stop after N epochs
-      setTimeout(() => {
-        stopTraining();
-      }, AUTO_TRAIN_EPOCHS * 80);
-    }, 400);
+      setTimeout(() => stopTraining(), AUTO_TRAIN_EPOCHS * CINEMATIC_EPOCH_INTERVAL);
+    }, AUTO_TRAIN_DELAY);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -284,12 +145,12 @@ function App() {
       switch (e.key.toLowerCase()) {
         case ' ':
           e.preventDefault();
-          if (cinematicActive) { stopCinematic(); break; }
+          if (cinematic.active) { stopCinematic(); break; }
           if (state.isTraining) stopTraining();
           else handleStart();
           break;
         case 'r':
-          if (!state.isTraining && !cinematicActive) handleReset();
+          if (!state.isTraining && !cinematic.active) handleReset();
           break;
         case 'h':
           setShowHelp(prev => !prev);
@@ -298,14 +159,14 @@ function App() {
           startCinematic();
           break;
         case 'escape':
-          if (cinematicActive) stopCinematic();
+          if (cinematic.active) stopCinematic();
           setShowHelp(false);
           break;
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [state.isTraining, cinematicActive, stopTraining, handleStart, handleReset, startCinematic, stopCinematic]);
+  }, [state.isTraining, cinematic.active, stopTraining, handleStart, handleReset, startCinematic, stopCinematic]);
 
   const displayLayers = predictionLayers || state.snapshot?.layers || null;
 
@@ -344,12 +205,12 @@ function App() {
               </div>
               <div className="experience-buttons">
                 <button
-                  className={`btn btn-experience ${cinematicActive ? 'active' : ''}`}
+                  className={`btn btn-experience ${cinematic.active ? 'active' : ''}`}
                   onClick={startCinematic}
-                  aria-label={cinematicActive ? 'Stop cinematic demo' : 'Start cinematic demo'}
-                  aria-pressed={cinematicActive}
+                  aria-label={cinematic.active ? 'Stop cinematic demo' : 'Start cinematic demo'}
+                  aria-pressed={cinematic.active}
                 >
-                  <span aria-hidden="true">🎬</span> {cinematicActive ? 'Stop Demo' : 'Cinematic'}
+                  <span aria-hidden="true">🎬</span> {cinematic.active ? 'Stop Demo' : 'Cinematic'}
                 </button>
               </div>
             </div>
@@ -378,9 +239,7 @@ function App() {
           </div>
 
           <div className="column column-right">
-            <ActivationVisualizer
-              layers={displayLayers}
-            />
+            <ActivationVisualizer layers={displayLayers} />
             <WeightPanel layers={displayLayers} />
 
             <DigitMorph
@@ -440,13 +299,13 @@ function App() {
       </div>
 
       {/* Cinematic badge */}
-      {cinematicActive && (
+      {cinematic.active && (
         <CinematicBadge
-          phase={cinematicPhase}
-          epoch={cinematicEpoch}
+          phase={cinematic.phase}
+          epoch={cinematic.epoch}
           maxEpochs={CINEMATIC_TRAIN_EPOCHS}
-          currentDigit={cinematicDigit}
-          progress={cinematicProgress}
+          currentDigit={cinematic.digit}
+          progress={cinematic.progress}
         />
       )}
 
@@ -459,11 +318,9 @@ function App() {
               <button className="btn-close" onClick={() => setShowHelp(false)} aria-label="Close help">✕</button>
             </div>
             <div className="help-list">
-              <div className="help-row"><kbd>Space</kbd><span>Train / Pause</span></div>
-              <div className="help-row"><kbd>R</kbd><span>Reset network</span></div>
-              <div className="help-row"><kbd>D</kbd><span>Cinematic demo</span></div>
-              <div className="help-row"><kbd>H</kbd><span>Toggle help</span></div>
-              <div className="help-row"><kbd>Esc</kbd><span>Close / Stop demo</span></div>
+              {SHORTCUTS.map(({ key, description }) => (
+                <div className="help-row" key={key}><kbd>{key}</kbd><span>{description}</span></div>
+              ))}
             </div>
           </div>
         </div>

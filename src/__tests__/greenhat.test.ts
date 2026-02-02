@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { NeuralNetwork } from '../nn/NeuralNetwork';
-import type { TrainingConfig, LayerState } from '../nn/NeuralNetwork';
+import type { TrainingConfig } from '../nn/NeuralNetwork';
 import { DIGIT_STROKES, getDigitDrawDuration } from '../data/digitStrokes';
 
 /**
@@ -71,9 +71,9 @@ describe('Feature Maps — first-layer weight structure', () => {
       labels.push(d);
     }
 
-    // Get initial weight similarity
+    // Get initial weight similarity (just verify it's computable)
     const before = nn.predict(new Array(784).fill(0)).layers[0].weights;
-    const initialCorr = weightCorrelation(before[0], before[1]);
+    expect(weightCorrelation(before[0], before[1])).toBeDefined();
 
     // Train for 20 epochs
     for (let e = 0; e < 20; e++) {

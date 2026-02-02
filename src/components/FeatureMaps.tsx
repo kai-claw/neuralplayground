@@ -1,15 +1,16 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import type { LayerState } from '../nn/NeuralNetwork';
+import {
+  FEATURE_MAP_CELL_SIZE,
+  FEATURE_MAP_CELL_GAP,
+  FEATURE_MAP_MAGNIFIER_SIZE,
+  FEATURE_MAP_MAX_COLS,
+  INPUT_DIM,
+} from '../constants';
 
 interface FeatureMapsProps {
   layers: LayerState[] | null;
 }
-
-/** Size of each mini feature map in CSS pixels */
-const CELL_SIZE = 38;
-const CELL_GAP = 3;
-const MAGNIFIER_SIZE = 140;
-const INPUT_DIM = 28; // 28×28 MNIST
 
 /**
  * Feature Maps — visualize what first-layer neurons have learned.
@@ -24,17 +25,16 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
   const gridCanvasRef = useRef<HTMLCanvasElement>(null);
   const magCanvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredNeuron, setHoveredNeuron] = useState<number | null>(null);
-  const [gridDims, setGridDims] = useState({ cols: 0, rows: 0, total: 0 });
 
   const firstLayer = layers && layers.length > 0 ? layers[0] : null;
   const numNeurons = firstLayer ? firstLayer.weights.length : 0;
 
-  // Compute grid layout
-  useEffect(() => {
-    if (numNeurons === 0) return;
-    const cols = Math.min(numNeurons, 8);
+  // Compute grid layout (derived state — no effect needed)
+  const gridDims = useMemo(() => {
+    if (numNeurons === 0) return { cols: 0, rows: 0, total: 0 };
+    const cols = Math.min(numNeurons, FEATURE_MAP_MAX_COLS);
     const rows = Math.ceil(numNeurons / cols);
-    setGridDims({ cols, rows, total: numNeurons });
+    return { cols, rows, total: numNeurons };
   }, [numNeurons]);
 
   /** Render a single neuron's weights as a 28×28 grayscale image onto an offscreen ImageData */
@@ -93,8 +93,8 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
     if (!ctx) return;
 
     const { cols, rows } = gridDims;
-    const gridW = cols * (CELL_SIZE + CELL_GAP) - CELL_GAP;
-    const gridH = rows * (CELL_SIZE + CELL_GAP) - CELL_GAP;
+    const gridW = cols * (FEATURE_MAP_CELL_SIZE + FEATURE_MAP_CELL_GAP) - FEATURE_MAP_CELL_GAP;
+    const gridH = rows * (FEATURE_MAP_CELL_SIZE + FEATURE_MAP_CELL_GAP) - FEATURE_MAP_CELL_GAP;
 
     const dpr = window.devicePixelRatio || 1;
     canvas.width = gridW * dpr;
@@ -107,43 +107,43 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
     for (let n = 0; n < firstLayer.weights.length; n++) {
       const col = n % cols;
       const row = Math.floor(n / cols);
-      const x = col * (CELL_SIZE + CELL_GAP);
-      const y = row * (CELL_SIZE + CELL_GAP);
+      const x = col * (FEATURE_MAP_CELL_SIZE + FEATURE_MAP_CELL_GAP);
+      const y = row * (FEATURE_MAP_CELL_SIZE + FEATURE_MAP_CELL_GAP);
 
-      const imgData = renderNeuronToImageData(firstLayer.weights[n], CELL_SIZE);
+      const imgData = renderNeuronToImageData(firstLayer.weights[n], FEATURE_MAP_CELL_SIZE);
 
       // Draw onto an offscreen canvas first (putImageData ignores scale)
       const offscreen = document.createElement('canvas');
-      offscreen.width = CELL_SIZE;
-      offscreen.height = CELL_SIZE;
+      offscreen.width = FEATURE_MAP_CELL_SIZE;
+      offscreen.height = FEATURE_MAP_CELL_SIZE;
       const offCtx = offscreen.getContext('2d');
       if (offCtx) {
         offCtx.putImageData(imgData, 0, 0);
-        ctx.drawImage(offscreen, x, y, CELL_SIZE, CELL_SIZE);
+        ctx.drawImage(offscreen, x, y, FEATURE_MAP_CELL_SIZE, FEATURE_MAP_CELL_SIZE);
       }
 
       // Hover highlight
       if (hoveredNeuron === n) {
         ctx.strokeStyle = 'rgba(99, 222, 255, 0.8)';
         ctx.lineWidth = 2;
-        ctx.strokeRect(x - 1, y - 1, CELL_SIZE + 2, CELL_SIZE + 2);
+        ctx.strokeRect(x - 1, y - 1, FEATURE_MAP_CELL_SIZE + 2, FEATURE_MAP_CELL_SIZE + 2);
       }
 
       // Neuron index label
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(x, y + CELL_SIZE - 12, 18, 12);
+      ctx.fillRect(x, y + FEATURE_MAP_CELL_SIZE - 12, 18, 12);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
       ctx.font = '8px Inter, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${n}`, x + 2, y + CELL_SIZE - 3);
+      ctx.fillText(`${n}`, x + 2, y + FEATURE_MAP_CELL_SIZE - 3);
 
       // Activation bar
       const act = firstLayer.activations[n] || 0;
-      const barW = Math.abs(act) / 2 * CELL_SIZE; // scale
+      const barW = Math.abs(act) / 2 * FEATURE_MAP_CELL_SIZE; // scale
       ctx.fillStyle = act > 0
         ? `rgba(99, 222, 255, ${0.5 + Math.abs(act) * 0.3})`
         : `rgba(255, 99, 132, ${0.5 + Math.abs(act) * 0.3})`;
-      ctx.fillRect(x, y, Math.min(barW, CELL_SIZE), 2);
+      ctx.fillRect(x, y, Math.min(barW, FEATURE_MAP_CELL_SIZE), 2);
     }
   }, [firstLayer, gridDims, hoveredNeuron, renderNeuronToImageData]);
 
@@ -156,29 +156,29 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = MAGNIFIER_SIZE * dpr;
-    canvas.height = MAGNIFIER_SIZE * dpr;
+    canvas.width = FEATURE_MAP_MAGNIFIER_SIZE * dpr;
+    canvas.height = FEATURE_MAP_MAGNIFIER_SIZE * dpr;
     ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, MAGNIFIER_SIZE, MAGNIFIER_SIZE);
+    ctx.clearRect(0, 0, FEATURE_MAP_MAGNIFIER_SIZE, FEATURE_MAP_MAGNIFIER_SIZE);
 
-    const imgData = renderNeuronToImageData(firstLayer.weights[hoveredNeuron], MAGNIFIER_SIZE);
+    const imgData = renderNeuronToImageData(firstLayer.weights[hoveredNeuron], FEATURE_MAP_MAGNIFIER_SIZE);
     const offscreen = document.createElement('canvas');
-    offscreen.width = MAGNIFIER_SIZE;
-    offscreen.height = MAGNIFIER_SIZE;
+    offscreen.width = FEATURE_MAP_MAGNIFIER_SIZE;
+    offscreen.height = FEATURE_MAP_MAGNIFIER_SIZE;
     const offCtx = offscreen.getContext('2d');
     if (offCtx) {
       offCtx.putImageData(imgData, 0, 0);
-      ctx.drawImage(offscreen, 0, 0, MAGNIFIER_SIZE, MAGNIFIER_SIZE);
+      ctx.drawImage(offscreen, 0, 0, FEATURE_MAP_MAGNIFIER_SIZE, FEATURE_MAP_MAGNIFIER_SIZE);
     }
 
     // Label
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, MAGNIFIER_SIZE - 22, MAGNIFIER_SIZE, 22);
+    ctx.fillRect(0, FEATURE_MAP_MAGNIFIER_SIZE - 22, FEATURE_MAP_MAGNIFIER_SIZE, 22);
     ctx.fillStyle = '#e5e7eb';
     ctx.font = 'bold 11px Inter, sans-serif';
     ctx.textAlign = 'center';
     const act = firstLayer.activations[hoveredNeuron] || 0;
-    ctx.fillText(`Neuron ${hoveredNeuron} — activation: ${act.toFixed(3)}`, MAGNIFIER_SIZE / 2, MAGNIFIER_SIZE - 7);
+    ctx.fillText(`Neuron ${hoveredNeuron} — activation: ${act.toFixed(3)}`, FEATURE_MAP_MAGNIFIER_SIZE / 2, FEATURE_MAP_MAGNIFIER_SIZE - 7);
   }, [firstLayer, hoveredNeuron, renderNeuronToImageData]);
 
   // Handle hover detection on grid canvas
@@ -190,15 +190,15 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
-    const col = Math.floor(mx / (CELL_SIZE + CELL_GAP));
-    const row = Math.floor(my / (CELL_SIZE + CELL_GAP));
+    const col = Math.floor(mx / (FEATURE_MAP_CELL_SIZE + FEATURE_MAP_CELL_GAP));
+    const row = Math.floor(my / (FEATURE_MAP_CELL_SIZE + FEATURE_MAP_CELL_GAP));
     const idx = row * gridDims.cols + col;
 
     // Check if cursor is actually within a cell (not in the gap)
-    const cellX = mx - col * (CELL_SIZE + CELL_GAP);
-    const cellY = my - row * (CELL_SIZE + CELL_GAP);
+    const cellX = mx - col * (FEATURE_MAP_CELL_SIZE + FEATURE_MAP_CELL_GAP);
+    const cellY = my - row * (FEATURE_MAP_CELL_SIZE + FEATURE_MAP_CELL_GAP);
 
-    if (cellX >= 0 && cellX < CELL_SIZE && cellY >= 0 && cellY < CELL_SIZE && idx < gridDims.total) {
+    if (cellX >= 0 && cellX < FEATURE_MAP_CELL_SIZE && cellY >= 0 && cellY < FEATURE_MAP_CELL_SIZE && idx < gridDims.total) {
       setHoveredNeuron(idx);
     } else {
       setHoveredNeuron(null);
@@ -243,7 +243,7 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
             <div className="feature-maps-magnifier">
               <canvas
                 ref={magCanvasRef}
-                style={{ width: MAGNIFIER_SIZE, height: MAGNIFIER_SIZE }}
+                style={{ width: FEATURE_MAP_MAGNIFIER_SIZE, height: FEATURE_MAP_MAGNIFIER_SIZE }}
                 className="feature-maps-mag-canvas"
                 role="img"
                 aria-label={`Enlarged feature map for neuron ${hoveredNeuron}`}
