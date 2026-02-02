@@ -32,6 +32,11 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
+  /* Ambient depth — subtle radial warmth so the dark bg feels like a canvas, not a void */
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(99, 222, 255, 0.015) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(167, 139, 250, 0.012) 0%, transparent 70%),
+    radial-gradient(ellipse 90% 60% at 50% 100%, rgba(16, 185, 129, 0.008) 0%, transparent 60%);
 }
 
 #root {
@@ -46,8 +51,8 @@ body {
 }
 
 @keyframes appFadeIn {
-  from { opacity: 0; filter: blur(4px); }
-  to { opacity: 1; filter: blur(0); }
+  from { opacity: 0; filter: blur(6px); transform: scale(0.99); }
+  to { opacity: 1; filter: blur(0); transform: scale(1); }
 }
 
 /* Header */
@@ -78,6 +83,13 @@ body {
 .logo-icon {
   font-size: 28px;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  opacity: 0;
+  animation: logoIconEntrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s forwards;
+}
+
+@keyframes logoIconEntrance {
+  from { opacity: 0; transform: scale(0.5) rotate(-15deg); }
+  to { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
 .logo:hover .logo-icon {
@@ -93,7 +105,12 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: -0.5px;
-  animation: titleShimmer 4s ease-in-out infinite;
+  animation: titleShimmer 4s ease-in-out infinite, titleEntrance 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+}
+
+@keyframes titleEntrance {
+  from { opacity: 0; transform: translateX(-10px); letter-spacing: 4px; }
+  to { opacity: 1; transform: translateX(0); letter-spacing: -0.5px; }
 }
 
 @keyframes titleShimmer {
@@ -1955,10 +1972,17 @@ button.section-header {
 /* ─── Neuron Surgery ─────────────────────────────────────────────── */
 
 .neuron-surgery {
-  background: var(--surface);
+  background: var(--bg-card);
   border-radius: var(--radius);
   padding: 12px;
   border: 1px solid var(--border);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  animation: creativeFeatureSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+.neuron-surgery:hover {
+  border-color: rgba(59, 130, 246, 0.2);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 20px rgba(59, 130, 246, 0.06);
 }
 
 .surgery-empty {
@@ -2084,10 +2108,17 @@ button.section-header {
 /* ─── Network Dreams ─────────────────────────────────────────────── */
 
 .network-dreams {
-  background: var(--surface);
+  background: var(--bg-card);
   border-radius: var(--radius);
   padding: 12px;
   border: 1px solid var(--border);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  animation: creativeFeatureSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+}
+
+.network-dreams:hover {
+  border-color: rgba(99, 222, 255, 0.2);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 20px rgba(99, 222, 255, 0.06);
 }
 
 .dreams-empty {
@@ -2218,10 +2249,17 @@ button.section-header {
 /* ─── Training Race ──────────────────────────────────────────────── */
 
 .training-race {
-  background: var(--surface);
+  background: var(--bg-card);
   border-radius: var(--radius);
   padding: 12px;
   border: 1px solid var(--border);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  animation: creativeFeatureSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+}
+
+.training-race:hover {
+  border-color: rgba(251, 191, 36, 0.2);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 20px rgba(251, 191, 36, 0.06);
 }
 
 .race-content {
@@ -2344,4 +2382,274 @@ button.section-header {
 @keyframes raceWinnerPop {
   0% { opacity: 0; transform: scale(0.8); }
   100% { opacity: 1; transform: scale(1); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PASS 9 — FINAL POLISH: MICRO-INTERACTIONS & EMOTIONAL DEPTH
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Creative Feature Entrance ─── */
+@keyframes creativeFeatureSlideIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); filter: blur(3px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+/* ─── Empty States — Breathing life into idle moments ─── */
+.surgery-empty,
+.dreams-empty,
+.adversarial-empty,
+.feature-maps-empty,
+.morph-empty {
+  position: relative;
+  animation: emptyHintPulse 3s ease-in-out infinite;
+}
+
+.surgery-empty::before,
+.dreams-empty::before {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 222, 255, 0.08) 0%, transparent 70%);
+  animation: emptyOrb 4s ease-in-out infinite;
+}
+
+@keyframes emptyOrb {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* ─── Dream Canvas Glow During Dreaming ─── */
+.dreams-canvas {
+  transition: box-shadow 0.5s ease, border-color 0.5s ease;
+}
+
+.dreams-canvas.dreaming,
+.network-dreams:has(.dreams-progress-fill) .dreams-canvas {
+  box-shadow: 0 0 25px rgba(99, 222, 255, 0.2), 0 0 50px rgba(167, 139, 250, 0.1);
+  animation: dreamGlow 2s ease-in-out infinite;
+}
+
+@keyframes dreamGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(99, 222, 255, 0.15), 0 0 30px rgba(167, 139, 250, 0.08); }
+  50% { box-shadow: 0 0 25px rgba(99, 222, 255, 0.25), 0 0 50px rgba(167, 139, 250, 0.15); }
+}
+
+/* ─── Dream Gallery Canvas Hover ─── */
+.dreams-gallery-canvas {
+  transition: box-shadow 0.3s ease;
+}
+
+.dreams-gallery-canvas:hover {
+  box-shadow: 0 0 16px rgba(99, 222, 255, 0.15);
+}
+
+/* ─── Dream Progress Bar Glow ─── */
+.dreams-progress-fill {
+  box-shadow: 0 0 8px rgba(99, 222, 255, 0.3);
+}
+
+/* ─── Surgery Canvas Hover Feedback ─── */
+.surgery-canvas {
+  cursor: crosshair;
+  transition: box-shadow 0.3s ease;
+}
+
+.surgery-canvas:hover {
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.1);
+}
+
+/* ─── Surgery Stats Badges Pop ─── */
+.surgery-stat {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.surgery-stat:hover {
+  transform: scale(1.05);
+}
+
+/* ─── Surgery Impact Bar Glow ─── */
+.surgery-bar-fill {
+  box-shadow: 0 0 6px rgba(99, 222, 255, 0.2);
+}
+
+/* ─── Race Preset Buttons — Hover Lift & Active Pop ─── */
+.race-preset-btn {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.race-preset-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(99, 222, 255, 0.15);
+}
+
+.race-preset-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* ─── Race Config Cards — Subtle Glow on Border Color ─── */
+.race-config-card {
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.race-config-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ─── Race Chart Canvas — Depth ─── */
+.race-chart-canvas {
+  transition: box-shadow 0.3s ease;
+}
+
+.race-chart-canvas:hover {
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ─── Race Winner Enhanced Glow ─── */
+.race-winner-a {
+  box-shadow: 0 0 12px rgba(99, 222, 255, 0.15);
+}
+
+.race-winner-b {
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+}
+
+/* ─── Drawing Canvas — Idle Breathing Border ─── */
+.drawing-canvas-container {
+  position: relative;
+}
+
+.drawing-canvas-container::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(99, 222, 255, 0.08), transparent 40%, transparent 60%, rgba(167, 139, 250, 0.08));
+  z-index: -1;
+  opacity: 0;
+  animation: drawCanvasReady 2s ease-in-out 2s forwards;
+  transition: opacity 0.5s ease;
+}
+
+@keyframes drawCanvasReady {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+.drawing-canvas-container:hover::before {
+  opacity: 1;
+}
+
+/* ─── Panel Header Glow Accent Color Per Feature ─── */
+.neuron-surgery .panel-header:hover {
+  border-left-color: #3b82f6;
+  color: #93c5fd;
+}
+
+.network-dreams .panel-header:hover {
+  border-left-color: var(--accent-purple);
+  color: var(--accent-purple);
+}
+
+.training-race .panel-header:hover {
+  border-left-color: var(--accent-yellow);
+  color: var(--accent-yellow);
+}
+
+/* ─── Probability Bar Fill — Smooth Spring Easing ─── */
+.prob-fill {
+  transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+/* ─── Stat Number Glow on Hover ─── */
+.stat-item:hover .stat-number {
+  text-shadow: 0 0 20px rgba(99, 222, 255, 0.6);
+}
+
+/* ─── Heartbeat Dot Enhanced Glow ─── */
+.heartbeat-dot.active {
+  box-shadow: 0 0 8px var(--accent-green), 0 0 16px rgba(16, 185, 129, 0.2);
+}
+
+/* ─── Creative Features Row Section Divider ─── */
+.creative-features-row {
+  position: relative;
+  padding-top: 20px;
+}
+
+.creative-features-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99, 222, 255, 0.1) 30%, rgba(167, 139, 250, 0.1) 70%, transparent);
+}
+
+/* ─── Experience Button Emoji Bounce ─── */
+.btn-experience span[aria-hidden] {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-experience:hover span[aria-hidden] {
+  transform: scale(1.2) rotate(-5deg);
+}
+
+/* ─── Dream Digit Button Enhanced Active State ─── */
+.dreams-digit-btn.active {
+  animation: dreamDigitPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes dreamDigitPop {
+  from { transform: scale(0.85); }
+  to { transform: scale(1); }
+}
+
+/* ─── Morph Canvas Shimmer ─── */
+.morph-canvas {
+  position: relative;
+}
+
+/* ─── Instructions Bar Hover Lift ─── */
+.instructions-bar {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.instructions-bar:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.instructions-bar kbd {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.instructions-bar:hover kbd {
+  border-color: rgba(99, 222, 255, 0.3);
+  box-shadow: 0 0 4px rgba(99, 222, 255, 0.1);
+}
+
+/* ─── Footer Hover Warm Glow ─── */
+.footer-version {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.footer-version:hover {
+  box-shadow: 0 0 8px rgba(99, 222, 255, 0.15);
+}
+
+/* ─── Panel Icon Micro-rotation on Header Hover ─── */
+.panel-header .panel-icon {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.panel-header:hover .panel-icon {
+  transform: scale(1.15) rotate(-5deg);
 }
