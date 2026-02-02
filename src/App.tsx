@@ -354,7 +354,13 @@ function App() {
               </div>
             </div>
 
-            <DrawingCanvas ref={drawingCanvasRef} onDraw={handleDraw} />
+            <div style={livePrediction ? {
+              borderRadius: 'var(--radius)',
+              boxShadow: `0 0 ${Math.round((livePrediction[predictedLabel ?? 0] ?? 0) * 20)}px rgba(16, 185, 129, ${(livePrediction[predictedLabel ?? 0] ?? 0) * 0.25})`,
+              transition: 'box-shadow 0.4s ease',
+            } : undefined}>
+              <DrawingCanvas ref={drawingCanvasRef} onDraw={handleDraw} />
+            </div>
             <PredictionBar probabilities={livePrediction} />
           </div>
 
@@ -398,23 +404,26 @@ function App() {
               </div>
               <div className="stats-grid">
                 <div className="stat-item">
-                  <span className="stat-number" aria-label={`${state.epoch} epochs`}>{state.epoch}</span>
+                  <span className="stat-number" key={`epoch-${state.epoch}`} style={state.isTraining ? { animation: 'statTick 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)' } : undefined} aria-label={`${state.epoch} epochs`}>{state.epoch}</span>
                   <span className="stat-desc">Epochs</span>
                 </div>
                 <div className="stat-item">
-                  <span className="stat-number" aria-label={state.snapshot ? `Loss ${state.snapshot.loss.toFixed(4)}` : 'No loss data'}>
+                  <span className="stat-number" aria-label={state.snapshot ? `Loss ${state.snapshot.loss.toFixed(4)}` : 'No loss data'}
+                    style={state.snapshot && state.snapshot.loss < 0.5 ? { color: 'var(--accent-green)' } : undefined}>
                     {state.snapshot ? state.snapshot.loss.toFixed(4) : '—'}
                   </span>
                   <span className="stat-desc">Loss</span>
                 </div>
                 <div className="stat-item">
-                  <span className="stat-number" aria-label={state.snapshot ? `Accuracy ${(state.snapshot.accuracy * 100).toFixed(1)} percent` : 'No accuracy data'}>
+                  <span className="stat-number" aria-label={state.snapshot ? `Accuracy ${(state.snapshot.accuracy * 100).toFixed(1)} percent` : 'No accuracy data'}
+                    style={state.snapshot && state.snapshot.accuracy > 0.8 ? { color: 'var(--accent-green)' } : undefined}>
                     {state.snapshot ? `${(state.snapshot.accuracy * 100).toFixed(1)}%` : '—'}
                   </span>
                   <span className="stat-desc">Accuracy</span>
                 </div>
                 <div className="stat-item">
-                  <span className="stat-number" aria-label={predictedLabel !== null ? `Predicted digit ${predictedLabel}` : 'No prediction'}>
+                  <span className="stat-number" aria-label={predictedLabel !== null ? `Predicted digit ${predictedLabel}` : 'No prediction'}
+                    style={predictedLabel !== null ? { color: 'var(--accent-green)', fontSize: '24px' } : undefined}>
                     {predictedLabel !== null ? predictedLabel : '—'}
                   </span>
                   <span className="stat-desc">Prediction</span>

@@ -56,6 +56,17 @@ body {
   border-bottom: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(99, 222, 255, 0.03) 0%, transparent 100%);
   box-shadow: 0 1px 0 rgba(99, 222, 255, 0.05), 0 4px 16px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.app-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99, 222, 255, 0.15) 30%, rgba(167, 139, 250, 0.15) 70%, transparent);
 }
 
 .logo {
@@ -66,6 +77,11 @@ body {
 
 .logo-icon {
   font-size: 28px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.logo:hover .logo-icon {
+  transform: scale(1.15) rotate(-5deg);
 }
 
 .logo h1 {
@@ -120,6 +136,14 @@ body {
   font-size: 13px;
   margin-top: 4px;
   margin-left: 42px;
+  opacity: 0;
+  animation: subtitleFadeIn 0.8s ease 0.3s forwards;
+  letter-spacing: 0.2px;
+}
+
+@keyframes subtitleFadeIn {
+  from { opacity: 0; transform: translateY(4px); letter-spacing: 2px; }
+  to { opacity: 1; transform: translateY(0); letter-spacing: 0.2px; }
 }
 
 /* Main Layout */
@@ -154,6 +178,13 @@ body {
   border-bottom: 1px solid var(--border);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  border-left: 2px solid transparent;
+  transition: border-left-color 0.3s ease, color 0.3s ease;
+}
+
+.panel-header:hover {
+  border-left-color: var(--accent-blue);
+  color: var(--text-primary);
 }
 
 .panel-header span:not(.panel-icon) {
@@ -219,6 +250,11 @@ body {
   height: auto;
   cursor: crosshair;
   touch-action: none;
+  transition: box-shadow 0.3s ease;
+}
+
+.drawing-canvas:active {
+  box-shadow: inset 0 0 30px rgba(99, 222, 255, 0.08);
 }
 
 .canvas-controls {
@@ -232,6 +268,12 @@ body {
   color: var(--text-muted);
   font-size: 11px;
   padding: 0 14px 10px;
+  opacity: 0;
+  animation: hintFadeIn 0.6s ease 1.8s forwards;
+}
+
+@keyframes hintFadeIn {
+  to { opacity: 0.7; }
 }
 
 /* Control Panel */
@@ -459,6 +501,12 @@ body {
   border-radius: var(--radius-sm);
   padding: 10px;
   border: 1px solid var(--border);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.layer-config:hover {
+  border-color: rgba(99, 222, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .layer-header {
@@ -604,12 +652,20 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 0;
+  padding: 3px 4px;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.prob-row:hover:not(.active) {
+  background: rgba(99, 222, 255, 0.03);
 }
 
 .prob-row.active {
   transform: scale(1.02);
   animation: predictionPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.06) 0%, transparent 80%);
+  border-radius: 4px;
 }
 
 @keyframes predictionPop {
@@ -642,7 +698,11 @@ body {
 .prob-fill {
   height: 100%;
   border-radius: 3px;
-  transition: width 0.3s ease;
+  transition: width 0.3s ease, box-shadow 0.3s ease;
+}
+
+.prob-row.active .prob-fill {
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
 }
 
 .prob-value {
@@ -688,6 +748,7 @@ body {
   color: var(--accent-blue);
   border-color: var(--accent-blue);
   animation: tabBounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 -2px 8px rgba(99, 222, 255, 0.1);
 }
 
 @keyframes tabBounce {
@@ -710,6 +771,11 @@ body {
   justify-content: center;
   padding: 14px;
   background: var(--bg-card);
+  transition: background 0.3s ease;
+}
+
+.stat-item:hover {
+  background: var(--bg-card-hover);
 }
 
 .stat-number {
@@ -743,6 +809,17 @@ body {
   gap: 8px;
   font-size: 12px;
   color: var(--text-muted);
+  position: relative;
+}
+
+.app-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99, 222, 255, 0.1) 30%, rgba(167, 139, 250, 0.1) 70%, transparent);
 }
 
 .footer-dot {
@@ -844,11 +921,12 @@ button.section-header {
 
 /* Section heading warm accent */
 .control-section {
-  transition: border-color 0.3s ease;
+  transition: border-color 0.3s ease, background 0.3s ease;
 }
 
 .control-section:hover {
   border-bottom-color: rgba(99, 222, 255, 0.15);
+  background: rgba(99, 222, 255, 0.01);
 }
 
 /* Help overlay */
@@ -954,13 +1032,19 @@ button.section-header {
 }
 
 .help-row {
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s ease;
   border-radius: 4px;
   padding: 6px 4px;
 }
 
 .help-row:hover {
   background: rgba(99, 222, 255, 0.03);
+  transform: translateX(3px);
+}
+
+.help-row:hover kbd {
+  border-color: var(--accent-blue);
+  box-shadow: 0 1px 4px rgba(99, 222, 255, 0.15);
 }
 
 /* Instructions bar */
@@ -1021,6 +1105,141 @@ button.section-header {
   background: var(--accent-blue);
 }
 
+/* ─── Epoch counter tick animation ─── */
+.stat-value,
+.stat-number {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.5s ease;
+}
+
+@keyframes statTick {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* ─── Loss chart canvas vignette ─── */
+.loss-chart {
+  position: relative;
+}
+
+.loss-chart::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 65%, rgba(10, 14, 23, 0.3) 100%);
+  z-index: 1;
+}
+
+/* ─── Panel card ambient depth ─── */
+.control-panel,
+.drawing-canvas-container,
+.experience-panel,
+.prediction-bar,
+.network-visualizer,
+.loss-chart,
+.activation-visualizer,
+.weight-panel,
+.feature-maps,
+.digit-morph,
+.adversarial-lab,
+.stats-panel {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.control-panel:hover,
+.drawing-canvas-container:hover,
+.experience-panel:hover,
+.prediction-bar:hover,
+.loss-chart:hover,
+.activation-visualizer:hover,
+.weight-panel:hover,
+.feature-maps:hover,
+.digit-morph:hover,
+.adversarial-lab:hover,
+.stats-panel:hover {
+  border-color: rgba(99, 222, 255, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 1px rgba(99, 222, 255, 0.1);
+}
+
+/* ─── Morph slot button feel ─── */
+.morph-slot-btn {
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.morph-slot-btn:active {
+  transform: scale(0.94);
+}
+
+.morph-slot-btn.saved {
+  animation: savedPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes savedPop {
+  from { transform: scale(0.9); }
+  50% { transform: scale(1.06); }
+  to { transform: scale(1); }
+}
+
+/* ─── Adversarial type button active feel ─── */
+.adversarial-type-btn.active {
+  animation: advTypePop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes advTypePop {
+  from { transform: scale(0.93); }
+  to { transform: scale(1); }
+}
+
+/* ─── Target digit button press feel ─── */
+.target-digit-btn:active {
+  transform: scale(0.88);
+}
+
+/* ─── Confidence meter fill glow ─── */
+.confidence-fill {
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.3);
+}
+
+.confidence-fill.flipped {
+  box-shadow: 0 0 6px rgba(255, 99, 132, 0.3);
+}
+
+/* ─── Feature maps magnifier glass-morphism ─── */
+.feature-maps-mag-canvas {
+  box-shadow: 0 0 20px rgba(99, 222, 255, 0.2), 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Prediction empty state pulsing hint ─── */
+.prediction-empty {
+  animation: emptyHintPulse 3s ease-in-out infinite;
+}
+
+@keyframes emptyHintPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+
+/* ─── Scrollbar fade-in ─── */
+::-webkit-scrollbar-thumb {
+  transition: background 0.2s ease;
+}
+
+/* ─── Canvas controls button alignment ─── */
+.canvas-controls .btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.canvas-controls .btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.03) 100%);
+  pointer-events: none;
+}
+
 /* prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -1076,6 +1295,11 @@ button.section-header {
   border-color: var(--accent-yellow);
   color: var(--accent-yellow);
   animation: experienceGlow 2s ease-in-out infinite;
+  transform: none;
+}
+
+.btn-experience:active {
+  transform: scale(0.94);
 }
 
 @keyframes experienceGlow {
@@ -1098,6 +1322,7 @@ button.section-header {
   border-radius: 20px;
   z-index: 100;
   animation: cinematicSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 1px rgba(251, 191, 36, 0.2);
 }
 
 @keyframes cinematicSlideIn {
@@ -1209,6 +1434,12 @@ button.section-header {
   border: 1px solid var(--border);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.3s ease;
+}
+
+.morph-canvas:hover {
+  box-shadow: 0 4px 20px rgba(167, 139, 250, 0.15), 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .morph-slider-row {
@@ -1263,6 +1494,16 @@ button.section-header {
   position: relative;
 }
 
+.network-visualizer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(10, 14, 23, 0.4) 100%);
+  z-index: 1;
+}
+
 .network-canvas {
   /* Ensure particles show with slight glow */
   image-rendering: auto;
@@ -1295,6 +1536,11 @@ button.section-header {
   cursor: crosshair;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  transition: box-shadow 0.3s ease;
+}
+
+.feature-maps-canvas:hover {
+  box-shadow: 0 0 12px rgba(99, 222, 255, 0.1);
 }
 
 .feature-maps-magnifier {
@@ -1378,6 +1624,8 @@ button.section-header {
   border: 1px solid var(--border);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.5s ease, border-color 0.5s ease;
 }
 
 .adversarial-flip-badge {
@@ -1392,8 +1640,14 @@ button.section-header {
   font-weight: 700;
   border-radius: 12px;
   white-space: nowrap;
-  animation: flipBadgePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: flipBadgePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), flipBadgeGlow 1.5s ease-in-out 0.35s infinite;
   box-shadow: 0 0 16px rgba(255, 99, 132, 0.5);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes flipBadgeGlow {
+  0%, 100% { box-shadow: 0 0 16px rgba(255, 99, 132, 0.5); }
+  50% { box-shadow: 0 0 24px rgba(255, 99, 132, 0.7), 0 0 40px rgba(255, 99, 132, 0.2); }
 }
 
 @keyframes flipBadgePop {
