@@ -1,0 +1,17 @@
+{
+  "name": "NeuralPlayground",
+  "short_name": "NeuralPlayground",
+  "description": "Watch neural networks learn in real-time. Draw digits, train networks, visualize weights and activations.",
+  "start_url": "/neuralplayground/",
+  "display": "standalone",
+  "background_color": "#0a0e17",
+  "theme_color": "#63deff",
+  "categories": ["education", "utilities"],
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

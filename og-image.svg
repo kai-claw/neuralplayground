@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0e17"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#63deff"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="warm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff6384"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <!-- Network visualization -->
+  <!-- Input layer -->
+  <circle cx="250" cy="180" r="14" fill="url(#accent)" opacity="0.8"/>
+  <circle cx="250" cy="240" r="14" fill="url(#accent)" opacity="0.8"/>
+  <circle cx="250" cy="300" r="14" fill="url(#accent)" opacity="0.8"/>
+  <circle cx="250" cy="360" r="14" fill="url(#accent)" opacity="0.8"/>
+  <circle cx="250" cy="420" r="14" fill="url(#accent)" opacity="0.8"/>
+  <!-- Hidden 1 -->
+  <circle cx="450" cy="200" r="16" fill="url(#warm)" opacity="0.8"/>
+  <circle cx="450" cy="280" r="16" fill="url(#warm)" opacity="0.8"/>
+  <circle cx="450" cy="360" r="16" fill="url(#warm)" opacity="0.8"/>
+  <circle cx="450" cy="440" r="16" fill="url(#warm)" opacity="0.7"/>
+  <!-- Hidden 2 -->
+  <circle cx="650" cy="240" r="16" fill="url(#warm)" opacity="0.7"/>
+  <circle cx="650" cy="320" r="16" fill="url(#warm)" opacity="0.8"/>
+  <circle cx="650" cy="400" r="16" fill="url(#warm)" opacity="0.7"/>
+  <!-- Output -->
+  <circle cx="850" cy="280" r="18" fill="#10b981" opacity="0.9"/>
+  <circle cx="850" cy="370" r="18" fill="#10b981" opacity="0.7"/>
+  <!-- Connections (subset) -->
+  <line x1="264" y1="180" x2="434" y2="200" stroke="#63deff" stroke-width="1.5" opacity="0.3"/>
+  <line x1="264" y1="240" x2="434" y2="280" stroke="#63deff" stroke-width="2" opacity="0.4"/>
+  <line x1="264" y1="300" x2="434" y2="360" stroke="#ff6384" stroke-width="1.5" opacity="0.3"/>
+  <line x1="264" y1="360" x2="434" y2="280" stroke="#63deff" stroke-width="1.5" opacity="0.3"/>
+  <line x1="264" y1="420" x2="434" y2="440" stroke="#ff6384" stroke-width="1" opacity="0.2"/>
+  <line x1="466" y1="200" x2="634" y2="240" stroke="#fbbf24" stroke-width="2" opacity="0.4"/>
+  <line x1="466" y1="280" x2="634" y2="320" stroke="#fbbf24" stroke-width="2" opacity="0.4"/>
+  <line x1="466" y1="360" x2="634" y2="400" stroke="#ff6384" stroke-width="1.5" opacity="0.3"/>
+  <line x1="666" y1="240" x2="832" y2="280" stroke="#10b981" stroke-width="2.5" opacity="0.5"/>
+  <line x1="666" y1="320" x2="832" y2="280" stroke="#10b981" stroke-width="2.5" opacity="0.5"/>
+  <line x1="666" y1="400" x2="832" y2="370" stroke="#10b981" stroke-width="2" opacity="0.4"/>
+  <!-- Title -->
+  <text x="600" y="80" text-anchor="middle" font-family="Inter, sans-serif" font-size="48" font-weight="700" fill="url(#accent)">NeuralPlayground</text>
+  <text x="600" y="560" text-anchor="middle" font-family="Inter, sans-serif" font-size="24" fill="#9ca3af">Watch neural networks learn in real-time</text>
+</svg>
