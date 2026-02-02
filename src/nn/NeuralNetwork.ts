@@ -48,10 +48,33 @@ function activateDerivative(x: number, fn: ActivationFn): number {
   }
 }
 
+/** Stack-safe max — avoids Math.max(...arr) RangeError on large arrays */
+function safeMax(arr: number[]): number {
+  let m = -Infinity;
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] > m) m = arr[i];
+  }
+  return m;
+}
+
+/** Stack-safe argmax */
+function argmax(arr: number[]): number {
+  let maxIdx = 0;
+  let maxVal = arr[0];
+  for (let i = 1; i < arr.length; i++) {
+    if (arr[i] > maxVal) { maxVal = arr[i]; maxIdx = i; }
+  }
+  return maxIdx;
+}
+
 function softmax(arr: number[]): number[] {
-  const max = Math.max(...arr);
+  const max = safeMax(arr);
   const exps = arr.map(x => Math.exp(x - max));
   const sum = exps.reduce((a, b) => a + b, 0);
+  if (sum === 0 || !isFinite(sum)) {
+    // Uniform fallback on degenerate input
+    return arr.map(() => 1 / arr.length);
+  }
   return exps.map(x => x / sum);
 }
 
@@ -133,6 +156,8 @@ export class NeuralNetwork {
         for (let i = 0; i < current.length; i++) {
           sum += layer.weights[j][i] * current[i];
         }
+        // NaN/Infinity guard — clamp to safe range
+        if (!isFinite(sum)) sum = 0;
         preAct.push(sum);
         act.push(isOutput ? sum : activate(sum, activation as ActivationFn));
       }
@@ -164,9 +189,15 @@ export class NeuralNetwork {
       
       for (let j = 0; j < layer.weights.length; j++) {
         for (let i = 0; i < layer.weights[j].length; i++) {
-          layer.weights[j][i] -= lr * deltas[j] * prevActivations[i];
+          const grad = lr * deltas[j] * prevActivations[i];
+          if (isFinite(grad)) {
+            layer.weights[j][i] -= grad;
+          }
         }
-        layer.biases[j] -= lr * deltas[j];
+        const biasGrad = lr * deltas[j];
+        if (isFinite(biasGrad)) {
+          layer.biases[j] -= biasGrad;
+        }
       }
       
       if (l > 0) {
@@ -179,7 +210,8 @@ export class NeuralNetwork {
           for (let j = 0; j < layer.weights.length; j++) {
             sum += layer.weights[j][i] * deltas[j];
           }
-          newDeltas[i] = sum * activateDerivative(prevLayer.preActivations[i], activation as ActivationFn);
+          const d = sum * activateDerivative(prevLayer.preActivations[i], activation as ActivationFn);
+          newDeltas[i] = isFinite(d) ? d : 0;
         }
         deltas = newDeltas;
       }
@@ -209,9 +241,9 @@ export class NeuralNetwork {
       lastProbs = output;
       
       const loss = -Math.log(Math.max(output[label], 1e-10));
-      totalLoss += loss;
+      totalLoss += isFinite(loss) ? loss : 10; // cap degenerate loss
       
-      const predicted = output.indexOf(Math.max(...output));
+      const predicted = argmax(output);
       if (predicted === label) correct++;
       
       this.backward(input, target);
@@ -233,14 +265,14 @@ export class NeuralNetwork {
         preActivations: [...l.preActivations],
         activations: [...l.activations],
       })),
-      predictions: lastProbs.map((_, i) => i === lastProbs.indexOf(Math.max(...lastProbs)) ? 1 : 0),
+      predictions: lastProbs.map((_, i) => i === argmax(lastProbs) ? 1 : 0),
       outputProbabilities: lastProbs,
     };
   }
 
   predict(input: number[]): { label: number; probabilities: number[]; layers: LayerState[] } {
     const output = this.forward(input);
-    const label = output.indexOf(Math.max(...output));
+    const label = argmax(output);
     return {
       label,
       probabilities: output,

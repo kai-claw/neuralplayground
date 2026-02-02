@@ -23,8 +23,17 @@ export function DrawingCanvas({ onDraw, size = 280 }: DrawingCanvasProps) {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    // BUG FIX: touchEnd has no .touches — use changedTouches fallback
+    let clientX: number, clientY: number;
+    if ('touches' in e) {
+      const touch = e.touches[0] || e.changedTouches?.[0];
+      if (!touch) return { x: 0, y: 0 };
+      clientX = touch.clientX;
+      clientY = touch.clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
     return {
       x: (clientX - rect.left) * (size / rect.width),
       y: (clientY - rect.top) * (size / rect.height),
@@ -89,9 +98,9 @@ export function DrawingCanvas({ onDraw, size = 280 }: DrawingCanvasProps) {
   }, [size]);
 
   return (
-    <div className="drawing-canvas-container">
+    <div className="drawing-canvas-container" role="group" aria-label="Drawing area">
       <div className="panel-header">
-        <span className="panel-icon">✏️</span>
+        <span className="panel-icon" aria-hidden="true">✏️</span>
         <span>Draw a Digit</span>
       </div>
       <canvas
@@ -99,6 +108,8 @@ export function DrawingCanvas({ onDraw, size = 280 }: DrawingCanvasProps) {
         width={size}
         height={size}
         className="drawing-canvas"
+        role="img"
+        aria-label="Drawing canvas for digit input. Use mouse or touch to draw a digit 0-9."
         onMouseDown={handleStart}
         onMouseMove={handleMove}
         onMouseUp={handleEnd}
@@ -108,7 +119,7 @@ export function DrawingCanvas({ onDraw, size = 280 }: DrawingCanvasProps) {
         onTouchEnd={handleEnd}
       />
       <div className="canvas-controls">
-        <button className="btn btn-secondary" onClick={clear}>
+        <button className="btn btn-secondary" onClick={clear} aria-label="Clear drawing canvas">
           Clear Canvas
         </button>
       </div>

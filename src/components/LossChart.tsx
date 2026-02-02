@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 
 interface LossChartProps {
   lossHistory: number[];
@@ -7,8 +7,27 @@ interface LossChartProps {
   height?: number;
 }
 
-export function LossChart({ lossHistory, accuracyHistory, width = 400, height = 200 }: LossChartProps) {
+export function LossChart({ lossHistory, accuracyHistory, width: propWidth, height: propHeight }: LossChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ width: propWidth || 620, height: propHeight || 220 });
+
+  useEffect(() => {
+    if (propWidth && propHeight) {
+      setDims({ width: propWidth, height: propHeight });
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width;
+      if (w > 0) setDims({ width: w, height: Math.round(w * 0.355) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [propWidth, propHeight]);
+
+  const { width, height } = dims;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -53,10 +72,10 @@ export function LossChart({ lossHistory, accuracyHistory, width = 400, height = 
     const drawLine = (data: number[], maxVal: number, color: string, label: string, rightAxis: boolean) => {
       if (data.length < 2) return;
 
+      // Stroke the line
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-
       for (let i = 0; i < data.length; i++) {
         const x = pad.left + (i / Math.max(data.length - 1, 1)) * plotW;
         const y = pad.top + plotH - (Math.min(data[i], maxVal) / maxVal) * plotH;
@@ -65,13 +84,21 @@ export function LossChart({ lossHistory, accuracyHistory, width = 400, height = 
       }
       ctx.stroke();
 
-      // Fill area
+      // BUG FIX: Fill area needs its OWN path — previous code reused stroke path
+      // which corrupted the second line's fill by connecting to the first line's endpoint
+      ctx.beginPath();
+      for (let i = 0; i < data.length; i++) {
+        const x = pad.left + (i / Math.max(data.length - 1, 1)) * plotW;
+        const y = pad.top + plotH - (Math.min(data[i], maxVal) / maxVal) * plotH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
       const lastX = pad.left + ((data.length - 1) / Math.max(data.length - 1, 1)) * plotW;
-      ctx.globalAlpha = 0.08;
-      ctx.fillStyle = color;
       ctx.lineTo(lastX, pad.top + plotH);
       ctx.lineTo(pad.left, pad.top + plotH);
       ctx.closePath();
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = color;
       ctx.fill();
       ctx.globalAlpha = 1;
 
@@ -90,7 +117,11 @@ export function LossChart({ lossHistory, accuracyHistory, width = 400, height = 
       ctx.fillText(label, rightAxis ? pad.left + plotW + 15 : pad.left - 10, pad.top - 8);
     };
 
-    const maxLoss = Math.max(...lossHistory, 0.1);
+    // Stack-safe max — avoids RangeError with 10K+ epochs
+    let maxLoss = 0.1;
+    for (let i = 0; i < lossHistory.length; i++) {
+      if (lossHistory[i] > maxLoss) maxLoss = lossHistory[i];
+    }
     drawLine(lossHistory, maxLoss, '#ff6384', 'Loss', false);
     drawLine(accuracyHistory, 1, '#63deff', 'Accuracy', true);
 
@@ -121,15 +152,19 @@ export function LossChart({ lossHistory, accuracyHistory, width = 400, height = 
   }, [lossHistory, accuracyHistory, width, height]);
 
   return (
-    <div className="loss-chart">
+    <div className="loss-chart" ref={containerRef} role="group" aria-label="Training progress charts">
       <div className="panel-header">
-        <span className="panel-icon">📈</span>
+        <span className="panel-icon" aria-hidden="true">📈</span>
         <span>Training Progress</span>
       </div>
       <canvas
         ref={canvasRef}
         style={{ width, height }}
         className="chart-canvas"
+        role="img"
+        aria-label={lossHistory.length > 0
+          ? `Loss chart: ${lossHistory.length} epochs, current loss ${lossHistory[lossHistory.length - 1]?.toFixed(4)}, accuracy ${((accuracyHistory[accuracyHistory.length - 1] || 0) * 100).toFixed(1)}%`
+          : 'Training chart — no data yet'}
       />
     </div>
   );

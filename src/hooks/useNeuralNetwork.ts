@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { NeuralNetwork } from '../nn/NeuralNetwork';
 import type { TrainingConfig, TrainingSnapshot, LayerConfig } from '../nn/NeuralNetwork';
 import { generateTrainingData } from '../nn/sampleData';
@@ -32,6 +32,14 @@ export function useNeuralNetwork() {
     epoch: 0,
     config: defaultConfig,
   });
+
+  // BUG FIX: Clean up training timer on unmount to prevent memory leak
+  useEffect(() => {
+    return () => {
+      trainingRef.current = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const initNetwork = useCallback((config?: TrainingConfig) => {
     const cfg = config || state.config;

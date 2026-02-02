@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import type { LayerState } from '../nn/NeuralNetwork';
 
 interface NetworkVisualizerProps {
@@ -27,8 +27,28 @@ function getWeightColor(value: number): string {
   }
 }
 
-export function NetworkVisualizer({ layers, inputSize, width = 600, height = 400 }: NetworkVisualizerProps) {
+export function NetworkVisualizer({ layers, inputSize, width: propWidth, height: propHeight }: NetworkVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ width: propWidth || 620, height: propHeight || 420 });
+
+  // Responsive: measure container width and derive canvas size
+  useEffect(() => {
+    if (propWidth && propHeight) {
+      setDims({ width: propWidth, height: propHeight });
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width;
+      if (w > 0) setDims({ width: w, height: Math.round(w * 0.68) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [propWidth, propHeight]);
+
+  const { width, height } = dims;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -184,15 +204,17 @@ export function NetworkVisualizer({ layers, inputSize, width = 600, height = 400
   }, [layers, inputSize, width, height]);
 
   return (
-    <div className="network-visualizer">
+    <div className="network-visualizer" ref={containerRef} role="group" aria-label="Network architecture visualization">
       <div className="panel-header">
-        <span className="panel-icon">🧠</span>
+        <span className="panel-icon" aria-hidden="true">🧠</span>
         <span>Network Architecture</span>
       </div>
       <canvas
         ref={canvasRef}
         style={{ width, height }}
         className="network-canvas"
+        role="img"
+        aria-label={layers ? `Neural network with ${layers.length} layers` : 'Neural network — not yet initialized'}
       />
     </div>
   );

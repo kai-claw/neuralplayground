@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import type { LayerState } from '../nn/NeuralNetwork';
 
 interface ActivationVisualizerProps {
@@ -7,8 +7,27 @@ interface ActivationVisualizerProps {
   height?: number;
 }
 
-export function ActivationVisualizer({ layers, width = 300, height = 180 }: ActivationVisualizerProps) {
+export function ActivationVisualizer({ layers, width: propWidth, height: propHeight }: ActivationVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ width: propWidth || 320, height: propHeight || 280 });
+
+  useEffect(() => {
+    if (propWidth && propHeight) {
+      setDims({ width: propWidth, height: propHeight });
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width;
+      if (w > 0) setDims({ width: w, height: Math.round(w * 0.875) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [propWidth, propHeight]);
+
+  const { width, height } = dims;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -87,15 +106,17 @@ export function ActivationVisualizer({ layers, width = 300, height = 180 }: Acti
   }, [layers, width, height]);
 
   return (
-    <div className="activation-visualizer">
+    <div className="activation-visualizer" ref={containerRef} role="group" aria-label="Layer activation visualization">
       <div className="panel-header">
-        <span className="panel-icon">⚡</span>
+        <span className="panel-icon" aria-hidden="true">⚡</span>
         <span>Activations</span>
       </div>
       <canvas
         ref={canvasRef}
         style={{ width, height }}
         className="activation-canvas"
+        role="img"
+        aria-label={layers ? `Activation values for ${layers.length} layers` : 'No activation data yet'}
       />
     </div>
   );
