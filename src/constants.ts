@@ -101,3 +101,22 @@ export const SHORTCUTS = [
 // ─── Training step interval ─────────────────────────────────────────
 
 export const TRAINING_STEP_INTERVAL = 60; // ms between training steps
+
+// ─── Neuron Surgery ──────────────────────────────────────────────────
+
+export const SURGERY_NODE_RADIUS = 8;
+export const SURGERY_NODE_SPACING = 22;
+export const SURGERY_MAX_DISPLAY_NEURONS = 16;
+
+// ─── Network Dreams ─────────────────────────────────────────────────
+
+export const DREAM_DISPLAY_SIZE = 140;
+export const DREAM_STEPS = 80;
+export const DREAM_LR = 0.5;
+export const DREAM_ANIMATION_INTERVAL = 40; // ms per dream step
+
+// ─── Training Race ──────────────────────────────────────────────────
+
+export const RACE_EPOCHS = 50;
+export const RACE_STEP_INTERVAL = 40; // ms between race epochs
+export const RACE_CHART_HEIGHT = 140;

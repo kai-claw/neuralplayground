@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { TrainingConfig, LayerConfig, ActivationFn } from '../nn/NeuralNetwork';
+import { NEURON_OPTIONS, MAX_HIDDEN_LAYERS } from '../constants';
 
 interface ControlPanelProps {
   config: TrainingConfig;
@@ -133,7 +134,7 @@ export function ControlPanel({
                       disabled={isTraining}
                       className="select-small"
                     >
-                      {[8, 16, 32, 64, 128, 256].map((n) => (
+                      {NEURON_OPTIONS.map((n) => (
                         <option key={n} value={n}>{n}</option>
                       ))}
                     </select>
@@ -160,7 +161,7 @@ export function ControlPanel({
             <button
               className="btn btn-ghost btn-add-layer"
               onClick={addLayer}
-              disabled={isTraining || config.layers.length >= 5}
+              disabled={isTraining || config.layers.length >= MAX_HIDDEN_LAYERS}
               aria-label="Add a new hidden layer"
             >
               + Add Layer

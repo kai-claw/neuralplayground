@@ -14,6 +14,9 @@ import CinematicBadge from './components/CinematicBadge';
 import DigitMorph from './components/DigitMorph';
 import FeatureMaps from './components/FeatureMaps';
 import AdversarialLab from './components/AdversarialLab';
+import NeuronSurgery from './components/NeuronSurgery';
+import NetworkDreams from './components/NetworkDreams';
+import TrainingRace from './components/TrainingRace';
 import {
   AUTO_TRAIN_EPOCHS,
   AUTO_TRAIN_DELAY,
@@ -32,6 +35,10 @@ function App() {
     predict,
     updateConfig,
     updateLayers,
+    setNeuronStatus,
+    getNeuronStatus,
+    clearNeuronMasks,
+    dream,
   } = useNeuralNetwork();
 
   const [livePrediction, setLivePrediction] = useState<number[] | null>(null);
@@ -103,8 +110,8 @@ function App() {
     else setMorphSlotB(input);
   }, []);
 
-  // ─── Morph predict handler ───
-  const handleMorphPredict = useCallback((input: number[]) => {
+  // ─── Shared predict handler (morph + adversarial) ───
+  const handleExternalPredict = useCallback((input: number[]) => {
     const result = predict(input);
     if (result) {
       setLivePrediction(result.probabilities);
@@ -113,15 +120,17 @@ function App() {
     }
   }, [predict]);
 
-  // ─── Adversarial lab predict handler ───
-  const handleAdversarialPredict = useCallback((input: number[]) => {
-    const result = predict(input);
-    if (result) {
-      setLivePrediction(result.probabilities);
-      setPredictedLabel(result.label);
-      setPredictionLayers(result.layers);
+  // ─── Neuron surgery change handler — re-predict with modified network ───
+  const handleSurgeryChange = useCallback(() => {
+    if (currentDrawingInput) {
+      const result = predict(currentDrawingInput);
+      if (result) {
+        setLivePrediction(result.probabilities);
+        setPredictedLabel(result.label);
+        setPredictionLayers(result.layers);
+      }
     }
-  }, [predict]);
+  }, [currentDrawingInput, predict]);
 
   // ─── Auto-start training on first load for instant wow ───
   useEffect(() => {
@@ -245,13 +254,13 @@ function App() {
             <DigitMorph
               slotA={morphSlotA}
               slotB={morphSlotB}
-              onMorphPredict={handleMorphPredict}
+              onMorphPredict={handleExternalPredict}
               onSaveSlot={handleSaveMorphSlot}
             />
 
             <AdversarialLab
               currentInput={currentDrawingInput}
-              onPredict={handleAdversarialPredict}
+              onPredict={handleExternalPredict}
               probabilities={livePrediction}
               predictedLabel={predictedLabel}
             />
@@ -290,6 +299,24 @@ function App() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* ─── Creative Features Row ─── */}
+        <div className="creative-features-row">
+          <NeuronSurgery
+            layers={displayLayers}
+            onSetNeuronStatus={setNeuronStatus}
+            onGetNeuronStatus={getNeuronStatus}
+            onClearAll={clearNeuronMasks}
+            onSurgeryChange={handleSurgeryChange}
+            currentPrediction={livePrediction}
+            predictedLabel={predictedLabel}
+          />
+          <NetworkDreams
+            onDream={dream}
+            hasTrained={state.epoch > 0}
+          />
+          <TrainingRace />
         </div>
       </main>
 

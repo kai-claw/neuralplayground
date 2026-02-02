@@ -56,6 +56,9 @@ describe('Blue Hat — Directory structure', () => {
     'src/types.ts',
     'src/constants.ts',
     'src/utils.ts',
+    'src/visualizer.ts',
+    'src/noise.ts',
+    'src/rendering.ts',
     'src/nn/NeuralNetwork.ts',
     'src/nn/sampleData.ts',
     'src/hooks/useNeuralNetwork.ts',
@@ -84,8 +87,11 @@ describe('Blue Hat — Directory structure', () => {
     'ErrorBoundary',
     'FeatureMaps',
     'LossChart',
+    'NetworkDreams',
     'NetworkVisualizer',
+    'NeuronSurgery',
     'PredictionBar',
+    'TrainingRace',
     'WeightHeatmap',
     'WeightPanel',
   ];
@@ -96,8 +102,14 @@ describe('Blue Hat — Directory structure', () => {
     });
   }
 
-  it('has no stray .ts/.tsx files in src root besides App, main, types, constants, utils, vite-env', () => {
-    const allowed = new Set(['App.tsx', 'main.tsx', 'types.ts', 'constants.ts', 'utils.ts', 'vite-env.d.ts']);
+  it('has no stray .ts/.tsx files in src root besides known modules', () => {
+    const allowed = new Set([
+      'App.tsx', 'main.tsx', 'types.ts', 'constants.ts', 'utils.ts', 'vite-env.d.ts',
+      // Architecture modules extracted in pass 6:
+      'visualizer.ts',  // Network layout + particle generation (from NetworkVisualizer)
+      'noise.ts',       // Noise pattern generation + application (from AdversarialLab)
+      'rendering.ts',   // Shared ImageData rendering (from FeatureMaps/DigitMorph)
+    ]);
     const rootFiles = fs.readdirSync(SRC).filter(f => (f.endsWith('.ts') || f.endsWith('.tsx')) && !allowed.has(f));
     expect(rootFiles, `Stray files in src/: ${rootFiles.join(', ')}`).toEqual([]);
   });
@@ -145,6 +157,9 @@ describe('Blue Hat — Feature completeness', () => {
     ['DigitMorph', 'Digit morphing panel'],
     ['FeatureMaps', 'Feature map visualization'],
     ['AdversarialLab', 'Adversarial noise lab'],
+    ['NeuronSurgery', 'Neuron surgery panel'],
+    ['NetworkDreams', 'Network dreams visualization'],
+    ['TrainingRace', 'Training race competition'],
   ];
 
   for (const [comp, desc] of componentImports) {
@@ -249,9 +264,6 @@ describe('Blue Hat — Import/export hygiene', () => {
     const unusedButDocumented = new Set([
       'INPUT_SIZE',        // 784 literal used in NeuralNetwork(784, ...) — symbol not imported
       'OUTPUT_CLASSES',    // 10 literal used — symbol not imported
-      'NEURON_OPTIONS',    // ControlPanel hardcodes [8,16,32,64,128,256]
-      'MAX_HIDDEN_LAYERS', // ControlPanel hardcodes 5
-      'MORPH_DISPLAY_SIZE',// DigitMorph hardcodes 140
       'COLOR_GREEN_HEX',   // Unused — stat colors use CSS vars instead
     ]);
 
@@ -263,6 +275,42 @@ describe('Blue Hat — Import/export hygiene', () => {
     for (const name of exports) {
       if (unusedButDocumented.has(name)) continue;
       expect(allSrc, `constants.ts exports '${name}' but it's never used`).toContain(name);
+    }
+  });
+
+  it('visualizer.ts — every exported function is used in src/', () => {
+    const vizSrc = fs.readFileSync(path.join(SRC, 'visualizer.ts'), 'utf-8');
+    const exportedFns = [...vizSrc.matchAll(/export function (\w+)/g)].map(m => m[1]);
+    const allSrc = allTsFiles
+      .filter(f => !f.endsWith('visualizer.ts'))
+      .map(f => fs.readFileSync(f, 'utf-8'))
+      .join('\n');
+    for (const fn of exportedFns) {
+      expect(allSrc, `visualizer.ts exports '${fn}' but it's never imported`).toContain(fn);
+    }
+  });
+
+  it('noise.ts — every exported function is used in src/', () => {
+    const noiseSrc = fs.readFileSync(path.join(SRC, 'noise.ts'), 'utf-8');
+    const exportedFns = [...noiseSrc.matchAll(/export function (\w+)/g)].map(m => m[1]);
+    const allSrc = allTsFiles
+      .filter(f => !f.endsWith('noise.ts'))
+      .map(f => fs.readFileSync(f, 'utf-8'))
+      .join('\n');
+    for (const fn of exportedFns) {
+      expect(allSrc, `noise.ts exports '${fn}' but it's never imported`).toContain(fn);
+    }
+  });
+
+  it('rendering.ts — every exported function is used in src/', () => {
+    const renderSrc = fs.readFileSync(path.join(SRC, 'rendering.ts'), 'utf-8');
+    const exportedFns = [...renderSrc.matchAll(/export function (\w+)/g)].map(m => m[1]);
+    const allSrc = allTsFiles
+      .filter(f => !f.endsWith('rendering.ts'))
+      .map(f => fs.readFileSync(f, 'utf-8'))
+      .join('\n');
+    for (const fn of exportedFns) {
+      expect(allSrc, `rendering.ts exports '${fn}' but it's never imported`).toContain(fn);
     }
   });
 
@@ -737,6 +785,21 @@ describe('Blue Hat — Component separation of concerns', () => {
     expect(src).not.toContain("from 'react'");
   });
 
+  it('visualizer.ts has zero React imports (pure logic)', () => {
+    const src = fs.readFileSync(path.join(SRC, 'visualizer.ts'), 'utf-8');
+    expect(src).not.toContain("from 'react'");
+  });
+
+  it('noise.ts has zero React imports (pure logic)', () => {
+    const src = fs.readFileSync(path.join(SRC, 'noise.ts'), 'utf-8');
+    expect(src).not.toContain("from 'react'");
+  });
+
+  it('rendering.ts has zero React imports (pure logic)', () => {
+    const src = fs.readFileSync(path.join(SRC, 'rendering.ts'), 'utf-8');
+    expect(src).not.toContain("from 'react'");
+  });
+
   it('data/ module has zero React imports (pure data)', () => {
     const dataDir = path.join(SRC, 'data');
     const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.ts'));
@@ -860,7 +923,7 @@ describe('Blue Hat — Architecture validation', () => {
     const components = fs.readdirSync(compDir).filter(f => f.endsWith('.tsx'));
 
     // Utility hooks that are acceptable for direct component use
-    const utilityHooks = new Set(['useContainerDims']);
+    const utilityHooks = new Set(['useContainerDims', 'useTrainingRace']);
 
     for (const comp of components) {
       const src = fs.readFileSync(path.join(compDir, comp), 'utf-8');
@@ -971,6 +1034,14 @@ describe('Blue Hat — End-to-end data pipeline', () => {
     }
   });
 
+  it('App deduplicates morph + adversarial predict handlers', () => {
+    const appSrc = fs.readFileSync(path.join(SRC, 'App.tsx'), 'utf-8');
+    // Should use a single shared handler, not two identical ones
+    expect(appSrc).toContain('handleExternalPredict');
+    expect(appSrc).not.toContain('handleMorphPredict');
+    expect(appSrc).not.toContain('handleAdversarialPredict');
+  });
+
   it('canvasToInput → predict pipeline', async () => {
     const { NeuralNetwork } = await import('../nn/NeuralNetwork');
     const { canvasToInput } = await import('../nn/sampleData');
@@ -1001,5 +1072,383 @@ describe('Blue Hat — End-to-end data pipeline', () => {
     const result = nn.predict(input);
     expect(result.label).toBeGreaterThanOrEqual(0);
     expect(result.label).toBeLessThanOrEqual(9);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// 13. EXTRACTED MODULE: visualizer.ts
+// ═══════════════════════════════════════════════════════════════════
+
+describe('Blue Hat — visualizer.ts', () => {
+  it('computeNodePositions returns correct layer count', async () => {
+    const { computeNodePositions } = await import('../visualizer');
+    const sizes = [20, 64, 32, 10];
+    const positions = computeNodePositions(sizes, 600, 400, 50);
+    expect(positions.length).toBe(4);
+  });
+
+  it('computeNodePositions truncates large layers with overflow node', async () => {
+    const { computeNodePositions } = await import('../visualizer');
+    const { VIS_MAX_DISPLAYED_NODES } = await import('../constants');
+    const sizes = [20, 256, 10]; // middle layer exceeds max displayed
+    const positions = computeNodePositions(sizes, 600, 400, 50);
+    // Layer with 256 neurons should have VIS_MAX_DISPLAYED_NODES + 1 (+N overflow) nodes
+    expect(positions[1].length).toBe(VIS_MAX_DISPLAYED_NODES + 1);
+    // Output layer (10) fits without truncation
+    expect(positions[2].length).toBe(10);
+  });
+
+  it('computeNodePositions nodes are within canvas bounds', async () => {
+    const { computeNodePositions } = await import('../visualizer');
+    const w = 600, h = 400, pad = 50;
+    const positions = computeNodePositions([20, 64, 10], w, h, pad);
+    for (const layer of positions) {
+      for (const node of layer) {
+        expect(node.x).toBeGreaterThanOrEqual(pad);
+        expect(node.x).toBeLessThanOrEqual(w - pad);
+        // Y can extend slightly due to overflow sentinel
+        expect(node.y).toBeGreaterThan(0);
+        expect(node.y).toBeLessThan(h);
+      }
+    }
+  });
+
+  it('computeNodePositions handles 2-layer network', async () => {
+    const { computeNodePositions } = await import('../visualizer');
+    const positions = computeNodePositions([10, 10], 600, 400, 50);
+    expect(positions.length).toBe(2);
+    expect(positions[0].length).toBe(10);
+    expect(positions[1].length).toBe(10);
+  });
+
+  it('computeNodePositions returns empty for single layer', async () => {
+    const { computeNodePositions } = await import('../visualizer');
+    const positions = computeNodePositions([10], 600, 400, 50);
+    expect(positions.length).toBe(0);
+  });
+
+  it('getLayerSizes computes correct sizes from layers', async () => {
+    const { getLayerSizes } = await import('../visualizer');
+    const { NeuralNetwork } = await import('../nn/NeuralNetwork');
+    const { DEFAULT_CONFIG } = await import('../constants');
+    const nn = new NeuralNetwork(784, DEFAULT_CONFIG);
+    const result = nn.predict(new Array(784).fill(0));
+    const sizes = getLayerSizes(result.layers, 20);
+    // Input (capped at 20) + hidden layers + output
+    expect(sizes[0]).toBe(20);
+    expect(sizes[sizes.length - 1]).toBe(10);
+    expect(sizes.length).toBe(DEFAULT_CONFIG.layers.length + 2); // input + hiddens + output
+  });
+
+  it('generateParticles creates particles for valid network', async () => {
+    const { computeNodePositions, generateParticles } = await import('../visualizer');
+    const { NeuralNetwork } = await import('../nn/NeuralNetwork');
+    const { DEFAULT_CONFIG } = await import('../constants');
+    const nn = new NeuralNetwork(784, DEFAULT_CONFIG);
+    const result = nn.predict(new Array(784).fill(0.5));
+    const sizes = [20, ...result.layers.map(l => l.activations.length)];
+    const positions = computeNodePositions(sizes, 600, 400, 50);
+    const particles = generateParticles(positions, sizes, result.layers);
+    expect(particles.length).toBeGreaterThan(0);
+    for (const p of particles) {
+      expect(p.alive).toBe(true);
+      expect(p.progress).toBe(0);
+      expect(p.speed).toBeGreaterThan(0);
+      expect(p.alpha).toBeGreaterThan(0);
+      expect(p.size).toBeGreaterThan(0);
+      expect(isFinite(p.fromX)).toBe(true);
+      expect(isFinite(p.toX)).toBe(true);
+    }
+  });
+
+  it('Particle and NodePos types are exported', async () => {
+    const viz = await import('../visualizer');
+    expect(viz.computeNodePositions).toBeDefined();
+    expect(viz.generateParticles).toBeDefined();
+    expect(viz.getLayerSizes).toBeDefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// 14. EXTRACTED MODULE: noise.ts
+// ═══════════════════════════════════════════════════════════════════
+
+describe('Blue Hat — noise.ts', () => {
+  it('generateNoisePattern returns Float32Array of 784 elements', async () => {
+    const { generateNoisePattern } = await import('../noise');
+    for (const type of ['gaussian', 'salt-pepper', 'adversarial'] as const) {
+      const pattern = generateNoisePattern(type, 42);
+      expect(pattern).toBeInstanceOf(Float32Array);
+      expect(pattern.length).toBe(784);
+    }
+  });
+
+  it('generateNoisePattern is deterministic with same seed', async () => {
+    const { generateNoisePattern } = await import('../noise');
+    for (const type of ['gaussian', 'salt-pepper', 'adversarial'] as const) {
+      const a = generateNoisePattern(type, 42);
+      const b = generateNoisePattern(type, 42);
+      for (let i = 0; i < 784; i++) {
+        expect(a[i]).toBe(b[i]);
+      }
+    }
+  });
+
+  it('generateNoisePattern produces different patterns for different seeds', async () => {
+    const { generateNoisePattern } = await import('../noise');
+    const a = generateNoisePattern('gaussian', 42);
+    const b = generateNoisePattern('gaussian', 99);
+    let same = 0;
+    for (let i = 0; i < 784; i++) {
+      if (a[i] === b[i]) same++;
+    }
+    expect(same).toBeLessThan(784 * 0.01); // <1% identical
+  });
+
+  it('salt-pepper noise contains only -1, 0, or 1', async () => {
+    const { generateNoisePattern } = await import('../noise');
+    const pattern = generateNoisePattern('salt-pepper', 42);
+    for (let i = 0; i < 784; i++) {
+      expect([-1, 0, 1]).toContain(pattern[i]);
+    }
+  });
+
+  it('gaussian noise has values distributed around 0', async () => {
+    const { generateNoisePattern } = await import('../noise');
+    const pattern = generateNoisePattern('gaussian', 42);
+    let sum = 0;
+    for (let i = 0; i < 784; i++) sum += pattern[i];
+    const mean = sum / 784;
+    expect(Math.abs(mean)).toBeLessThan(0.3); // roughly centered
+  });
+
+  it('adversarial noise varies with targetDigit', async () => {
+    const { generateNoisePattern } = await import('../noise');
+    const a = generateNoisePattern('adversarial', 42, 0);
+    const b = generateNoisePattern('adversarial', 42, 5);
+    let diff = 0;
+    for (let i = 0; i < 784; i++) {
+      if (Math.abs(a[i] - b[i]) > 0.01) diff++;
+    }
+    expect(diff).toBeGreaterThan(100); // structurally different
+  });
+
+  it('applyNoise at level 0 returns original input', async () => {
+    const { generateNoisePattern, applyNoise } = await import('../noise');
+    const input = Array.from({ length: 784 }, () => Math.random());
+    const pattern = generateNoisePattern('gaussian', 42);
+    const noised = applyNoise(input, pattern, 0, 'gaussian', 42);
+    for (let i = 0; i < 784; i++) {
+      expect(noised[i]).toBeCloseTo(input[i], 10);
+    }
+  });
+
+  it('applyNoise clamps output to [0, 1]', async () => {
+    const { generateNoisePattern, applyNoise } = await import('../noise');
+    const input = Array.from({ length: 784 }, () => Math.random());
+    const pattern = generateNoisePattern('gaussian', 42);
+    const noised = applyNoise(input, pattern, 1.0, 'gaussian', 42);
+    for (let i = 0; i < 784; i++) {
+      expect(noised[i]).toBeGreaterThanOrEqual(0);
+      expect(noised[i]).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('applyNoise salt-pepper at level 1 produces binary values', async () => {
+    const { generateNoisePattern, applyNoise } = await import('../noise');
+    const input = Array.from({ length: 784 }, () => 0.5);
+    const pattern = generateNoisePattern('salt-pepper', 42);
+    const noised = applyNoise(input, pattern, 1.0, 'salt-pepper', 42);
+    for (let i = 0; i < 784; i++) {
+      expect(noised[i]).toBeGreaterThanOrEqual(0);
+      expect(noised[i]).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('all noise values are finite', async () => {
+    const { generateNoisePattern, applyNoise } = await import('../noise');
+    const input = Array.from({ length: 784 }, () => Math.random());
+    for (const type of ['gaussian', 'salt-pepper', 'adversarial'] as const) {
+      const pattern = generateNoisePattern(type, 42);
+      const noised = applyNoise(input, pattern, 0.5, type, 42);
+      for (let i = 0; i < 784; i++) {
+        expect(isFinite(noised[i])).toBe(true);
+      }
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// 15. EXTRACTED MODULE: rendering.ts
+// ═══════════════════════════════════════════════════════════════════
+
+describe('Blue Hat — rendering.ts', () => {
+  it('weightsToImageData returns correct dimensions', async () => {
+    const { weightsToImageData } = await import('../rendering');
+    const weights = new Array(784).fill(0).map(() => Math.random() * 2 - 1);
+    const imgData = weightsToImageData(weights, 28);
+    expect(imgData.width).toBe(28);
+    expect(imgData.height).toBe(28);
+    expect(imgData.data.length).toBe(28 * 28 * 4);
+  });
+
+  it('weightsToImageData upscales correctly', async () => {
+    const { weightsToImageData } = await import('../rendering');
+    const weights = new Array(784).fill(0);
+    const imgData = weightsToImageData(weights, 140);
+    expect(imgData.width).toBe(140);
+    expect(imgData.height).toBe(140);
+    expect(imgData.data.length).toBe(140 * 140 * 4);
+  });
+
+  it('weightsToImageData produces valid RGBA with full alpha', async () => {
+    const { weightsToImageData } = await import('../rendering');
+    const weights = new Array(784).fill(0).map(() => Math.random() * 2 - 1);
+    const imgData = weightsToImageData(weights, 28);
+    for (let i = 0; i < imgData.data.length; i += 4) {
+      expect(imgData.data[i]).toBeGreaterThanOrEqual(0);
+      expect(imgData.data[i]).toBeLessThanOrEqual(255);
+      expect(imgData.data[i + 3]).toBe(255); // full alpha
+    }
+  });
+
+  it('weightsToImageData: positive weights → cyan channel dominates', async () => {
+    const { weightsToImageData } = await import('../rendering');
+    const weights = new Array(784).fill(1); // all positive
+    const imgData = weightsToImageData(weights, 28);
+    // Sample center pixel — should be cyan-ish (high G and B)
+    const idx = (14 * 28 + 14) * 4;
+    expect(imgData.data[idx + 1]).toBeGreaterThan(imgData.data[idx]); // G > R
+    expect(imgData.data[idx + 2]).toBeGreaterThan(imgData.data[idx]); // B > R
+  });
+
+  it('weightsToImageData: negative weights → red channel dominates', async () => {
+    const { weightsToImageData } = await import('../rendering');
+    const weights = new Array(784).fill(-1); // all negative
+    const imgData = weightsToImageData(weights, 28);
+    const idx = (14 * 28 + 14) * 4;
+    expect(imgData.data[idx]).toBeGreaterThan(imgData.data[idx + 1]); // R > G
+    expect(imgData.data[idx]).toBeGreaterThan(imgData.data[idx + 2]); // R > B
+  });
+
+  it('pixelsToImageData returns correct dimensions', async () => {
+    const { pixelsToImageData } = await import('../rendering');
+    const pixels = new Array(784).fill(0.5);
+    const imgData = pixelsToImageData(pixels, 140);
+    expect(imgData.width).toBe(140);
+    expect(imgData.height).toBe(140);
+    expect(imgData.data.length).toBe(140 * 140 * 4);
+  });
+
+  it('pixelsToImageData: black input → dark pixels', async () => {
+    const { pixelsToImageData } = await import('../rendering');
+    const pixels = new Array(784).fill(0);
+    const imgData = pixelsToImageData(pixels, 28);
+    for (let i = 0; i < imgData.data.length; i += 4) {
+      expect(imgData.data[i]).toBe(0);
+      expect(imgData.data[i + 1]).toBe(0);
+      expect(imgData.data[i + 2]).toBe(0);
+      expect(imgData.data[i + 3]).toBe(255);
+    }
+  });
+
+  it('pixelsToImageData: white input → bright pixels', async () => {
+    const { pixelsToImageData } = await import('../rendering');
+    const pixels = new Array(784).fill(1);
+    const imgData = pixelsToImageData(pixels, 28);
+    for (let i = 0; i < imgData.data.length; i += 4) {
+      expect(imgData.data[i]).toBe(255);
+      expect(imgData.data[i + 1]).toBe(255);
+      expect(imgData.data[i + 2]).toBe(255);
+    }
+  });
+
+  it('lerpPixels blends correctly at endpoints', async () => {
+    const { lerpPixels } = await import('../rendering');
+    const a = [0, 0.5, 1];
+    const b = [1, 0.5, 0];
+    const atA = lerpPixels(a, b, 0);
+    expect(atA[0]).toBeCloseTo(0);
+    expect(atA[1]).toBeCloseTo(0.5);
+    expect(atA[2]).toBeCloseTo(1);
+    const atB = lerpPixels(a, b, 1);
+    expect(atB[0]).toBeCloseTo(1);
+    expect(atB[1]).toBeCloseTo(0.5);
+    expect(atB[2]).toBeCloseTo(0);
+  });
+
+  it('lerpPixels midpoint is average', async () => {
+    const { lerpPixels } = await import('../rendering');
+    const a = new Array(784).fill(0);
+    const b = new Array(784).fill(1);
+    const mid = lerpPixels(a, b, 0.5);
+    expect(mid.length).toBe(784);
+    for (const v of mid) {
+      expect(v).toBeCloseTo(0.5, 10);
+    }
+  });
+
+  it('lerpPixels handles mismatched lengths (uses shorter)', async () => {
+    const { lerpPixels } = await import('../rendering');
+    const a = [0, 0, 0, 0, 0];
+    const b = [1, 1, 1];
+    const result = lerpPixels(a, b, 0.5);
+    expect(result.length).toBe(3);
+  });
+
+  it('all rendering functions are pure (no side effects)', async () => {
+    const renderingSrc = fs.readFileSync(path.join(SRC, 'rendering.ts'), 'utf-8');
+    expect(renderingSrc).not.toContain('document.');
+    expect(renderingSrc).not.toContain('window.');
+    expect(renderingSrc).not.toContain('createElement');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// 16. MODULE REDUCTION METRICS
+// ═══════════════════════════════════════════════════════════════════
+
+describe('Blue Hat — Refactoring impact', () => {
+  it('NetworkVisualizer.tsx reduced by extraction (no inline computeNodePositions/generateParticles)', () => {
+    const src = fs.readFileSync(path.join(SRC, 'components', 'NetworkVisualizer.tsx'), 'utf-8');
+    // Should import from visualizer.ts, not define inline
+    expect(src).toContain("from '../visualizer'");
+    // Should NOT contain the full function definitions inline
+    expect(src).not.toContain('function computeNodePositions');
+    expect(src).not.toContain('function generateParticles');
+  });
+
+  it('AdversarialLab.tsx uses noise.ts (no inline noise generation)', () => {
+    const src = fs.readFileSync(path.join(SRC, 'components', 'AdversarialLab.tsx'), 'utf-8');
+    expect(src).toContain("from '../noise'");
+    // Should NOT contain module-level NOISE_PATTERN mutable buffer
+    expect(src).not.toContain('NOISE_PATTERN');
+    // Should NOT import mulberry32/gaussianNoise directly
+    expect(src).not.toContain("from '../utils'");
+  });
+
+  it('FeatureMaps.tsx uses rendering.ts (no inline renderNeuronToImageData body)', () => {
+    const src = fs.readFileSync(path.join(SRC, 'components', 'FeatureMaps.tsx'), 'utf-8');
+    expect(src).toContain("from '../rendering'");
+    // Should delegate to weightsToImageData, not contain the pixel-loop logic
+    expect(src).not.toContain('wMin');
+    expect(src).not.toContain('wMax');
+  });
+
+  it('ControlPanel uses constants (no hardcoded neuron options or max layers)', () => {
+    const src = fs.readFileSync(path.join(SRC, 'components', 'ControlPanel.tsx'), 'utf-8');
+    expect(src).toContain('NEURON_OPTIONS');
+    expect(src).toContain('MAX_HIDDEN_LAYERS');
+    expect(src).not.toContain('[8, 16, 32, 64, 128, 256]');
+    expect(src).not.toContain('>= 5');
+  });
+
+  it('DigitMorph uses constants (no hardcoded display size or grid dim)', () => {
+    const src = fs.readFileSync(path.join(SRC, 'components', 'DigitMorph.tsx'), 'utf-8');
+    expect(src).toContain('MORPH_DISPLAY_SIZE');
+    expect(src).toContain('INPUT_DIM');
+    // Should not hardcode 140 or 28
+    expect(src).not.toMatch(/= 140\b/);
+    expect(src).not.toMatch(/= 28\b/);
   });
 });

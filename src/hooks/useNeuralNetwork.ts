@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { NeuralNetwork } from '../nn/NeuralNetwork';
-import type { TrainingConfig, TrainingSnapshot, LayerConfig } from '../nn/NeuralNetwork';
+import type { TrainingConfig, TrainingSnapshot, LayerConfig, NeuronStatus } from '../nn/NeuralNetwork';
 import { generateTrainingData } from '../nn/sampleData';
 import { DEFAULT_CONFIG, DEFAULT_SAMPLES_PER_DIGIT, TRAINING_STEP_INTERVAL } from '../constants';
 
@@ -106,6 +106,40 @@ export function useNeuralNetwork() {
     }));
   }, []);
 
+  // ─── Neuron Surgery API ──────────────────────────────────────────
+
+  const setNeuronStatus = useCallback((layerIdx: number, neuronIdx: number, status: NeuronStatus) => {
+    if (!networkRef.current) return;
+    networkRef.current.setNeuronStatus(layerIdx, neuronIdx, status);
+  }, []);
+
+  const getNeuronStatus = useCallback((layerIdx: number, neuronIdx: number): NeuronStatus => {
+    if (!networkRef.current) return 'active';
+    return networkRef.current.getNeuronStatus(layerIdx, neuronIdx);
+  }, []);
+
+  const clearNeuronMasks = useCallback(() => {
+    if (!networkRef.current) return;
+    networkRef.current.clearAllMasks();
+  }, []);
+
+  // ─── Network Dreams API ──────────────────────────────────────────
+
+  const computeInputGradient = useCallback((input: number[], targetClass: number): number[] | null => {
+    if (!networkRef.current) return null;
+    return networkRef.current.computeInputGradient(input, targetClass);
+  }, []);
+
+  const dream = useCallback((
+    targetClass: number,
+    steps?: number,
+    lr?: number,
+    startImage?: number[],
+  ) => {
+    if (!networkRef.current) return null;
+    return networkRef.current.dream(targetClass, steps, lr, startImage);
+  }, []);
+
   return {
     state,
     initNetwork,
@@ -114,5 +148,10 @@ export function useNeuralNetwork() {
     predict,
     updateConfig,
     updateLayers,
+    setNeuronStatus,
+    getNeuronStatus,
+    clearNeuronMasks,
+    computeInputGradient,
+    dream,
   };
 }

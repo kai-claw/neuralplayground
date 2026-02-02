@@ -1926,3 +1926,422 @@ button.section-header {
     min-height: 44px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   CREATIVE FEATURES — Green Hat #2 (Neuron Surgery, Dreams, Race)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Creative Features Row ──────────────────────────────────────── */
+
+.creative-features-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 1200px) {
+  .creative-features-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .creative-features-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Neuron Surgery ─────────────────────────────────────────────── */
+
+.neuron-surgery {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 12px;
+  border: 1px solid var(--border);
+}
+
+.surgery-empty {
+  padding: 20px 14px;
+  text-align: center;
+}
+
+.surgery-empty p {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.surgery-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.surgery-instructions {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 4px 0;
+}
+
+.surgery-active-tag {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.surgery-frozen-tag {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.surgery-killed-tag {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.surgery-canvas {
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.surgery-stats {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.surgery-stat {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.surgery-stat.frozen {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
+
+.surgery-stat.killed {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+.surgery-stat.none {
+  background: rgba(16, 185, 129, 0.1);
+  color: #6ee7b7;
+}
+
+.surgery-impact {
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+}
+
+.surgery-impact-header {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.surgery-confidence-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.surgery-confidence-label {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.surgery-bar-track {
+  height: 6px;
+  background: #1f2937;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.surgery-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.surgery-restore-btn {
+  width: 100%;
+  font-size: 12px;
+}
+
+/* ─── Network Dreams ─────────────────────────────────────────────── */
+
+.network-dreams {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 12px;
+  border: 1px solid var(--border);
+}
+
+.dreams-empty {
+  padding: 20px 14px;
+  text-align: center;
+}
+
+.dreams-empty p {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dreams-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dreams-target-selector {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.dreams-digit-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dreams-digit-btn:hover {
+  border-color: #63deff;
+  color: #63deff;
+}
+
+.dreams-digit-btn.active {
+  background: rgba(99, 222, 255, 0.15);
+  border-color: #63deff;
+  color: #63deff;
+  box-shadow: 0 0 8px rgba(99, 222, 255, 0.2);
+}
+
+.dreams-digit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dreams-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.dreams-canvas {
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  display: block;
+  box-shadow: 0 0 15px rgba(99, 222, 255, 0.1);
+}
+
+.dreams-progress {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dreams-progress-bar {
+  height: 4px;
+  background: #1f2937;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.dreams-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #63deff, #a78bfa);
+  border-radius: 2px;
+  transition: width 0.1s ease;
+}
+
+.dreams-progress-text {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.dreams-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.dreams-btn {
+  flex: 1;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.dreams-gallery {
+  margin-top: 4px;
+}
+
+.dreams-gallery-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.dreams-gallery-canvas {
+  display: block;
+  margin: 0 auto;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ─── Training Race ──────────────────────────────────────────────── */
+
+.training-race {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 12px;
+  border: 1px solid var(--border);
+}
+
+.race-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.race-presets {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.race-preset-btn {
+  padding: 3px 8px;
+  font-size: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.race-preset-btn:hover {
+  border-color: #63deff;
+  color: #63deff;
+}
+
+.race-preset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.race-configs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.race-config-card {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.15);
+  border-left: 3px solid;
+}
+
+.race-config-header {
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.race-config-arch {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 4px;
+}
+
+.race-config-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.race-config-controls .select-small {
+  font-size: 10px;
+  padding: 2px 4px;
+  flex: 1;
+}
+
+.race-chart-canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.race-controls {
+  display: flex;
+  justify-content: center;
+}
+
+.race-btn {
+  font-size: 13px;
+  padding: 8px 24px;
+  font-weight: 700;
+}
+
+.race-winner {
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  animation: raceWinnerPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.race-winner-a {
+  background: rgba(99, 222, 255, 0.1);
+  border: 1px solid rgba(99, 222, 255, 0.3);
+  color: #63deff;
+}
+
+.race-winner-b {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+.race-winner-tie {
+  background: rgba(156, 163, 175, 0.1);
+  border: 1px solid rgba(156, 163, 175, 0.3);
+  color: #9ca3af;
+}
+
+@keyframes raceWinnerPop {
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}

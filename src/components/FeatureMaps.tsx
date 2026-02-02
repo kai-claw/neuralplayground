@@ -1,11 +1,11 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import type { LayerState } from '../nn/NeuralNetwork';
+import { weightsToImageData } from '../rendering';
 import {
   FEATURE_MAP_CELL_SIZE,
   FEATURE_MAP_CELL_GAP,
   FEATURE_MAP_MAGNIFIER_SIZE,
   FEATURE_MAP_MAX_COLS,
-  INPUT_DIM,
 } from '../constants';
 
 interface FeatureMapsProps {
@@ -37,53 +37,8 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
     return { cols, rows, total: numNeurons };
   }, [numNeurons]);
 
-  /** Render a single neuron's weights as a 28×28 grayscale image onto an offscreen ImageData */
-  const renderNeuronToImageData = useCallback((
-    weights: number[],
-    size: number,
-  ): ImageData => {
-    const imgData = new ImageData(size, size);
-    const data = imgData.data;
-
-    // Find weight range for contrast normalization
-    let wMin = Infinity;
-    let wMax = -Infinity;
-    const len = Math.min(weights.length, INPUT_DIM * INPUT_DIM);
-    for (let i = 0; i < len; i++) {
-      if (weights[i] < wMin) wMin = weights[i];
-      if (weights[i] > wMax) wMax = weights[i];
-    }
-    const range = wMax - wMin || 1;
-
-    // Scale factor for rendering at non-native sizes
-    const scale = size / INPUT_DIM;
-
-    for (let py = 0; py < size; py++) {
-      const sy = Math.min(Math.floor(py / scale), INPUT_DIM - 1);
-      for (let px = 0; px < size; px++) {
-        const sx = Math.min(Math.floor(px / scale), INPUT_DIM - 1);
-        const wi = sy * INPUT_DIM + sx;
-        const norm = wi < len ? (weights[wi] - wMin) / range : 0.5;
-
-        // Diverging colormap: negative (red/orange) ↔ zero (dark) ↔ positive (cyan/blue)
-        const idx = (py * size + px) * 4;
-        if (norm >= 0.5) {
-          const t = (norm - 0.5) * 2; // 0→1
-          data[idx]     = Math.round(20 + t * 79);    // R: 20→99
-          data[idx + 1] = Math.round(40 + t * 182);   // G: 40→222
-          data[idx + 2] = Math.round(60 + t * 195);   // B: 60→255
-        } else {
-          const t = (0.5 - norm) * 2; // 0→1
-          data[idx]     = Math.round(20 + t * 235);   // R: 20→255
-          data[idx + 1] = Math.round(40 + t * 59);    // G: 40→99
-          data[idx + 2] = Math.round(60 + t * 72);    // B: 60→132
-        }
-        data[idx + 3] = 255;
-      }
-    }
-
-    return imgData;
-  }, []);
+  /** Render a single neuron's weights as a diverging colormap ImageData */
+  const renderNeuronToImageData = useCallback(weightsToImageData, []);
 
   // Render the grid of mini feature maps
   useEffect(() => {

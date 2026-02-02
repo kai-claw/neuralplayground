@@ -1,4 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
+import { lerpPixels } from '../rendering';
+import { MORPH_DISPLAY_SIZE, INPUT_DIM } from '../constants';
 
 interface DigitMorphProps {
   slotA: number[] | null; // 784-element pixel array (28×28)
@@ -25,23 +27,19 @@ export function DigitMorph({ slotA, slotB, onMorphPredict, onSaveSlot }: DigitMo
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const size = 28;
-    const morphed = new Array<number>(size * size);
-    for (let i = 0; i < size * size; i++) {
-      morphed[i] = slotA[i] * (1 - t) + slotB[i] * t;
-    }
+    const morphed = lerpPixels(slotA, slotB, t);
 
     // Draw scaled-up version
-    const displaySize = 140;
+    const displaySize = MORPH_DISPLAY_SIZE;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = displaySize * dpr;
     canvas.height = displaySize * dpr;
     ctx.scale(dpr, dpr);
 
-    const cellSize = displaySize / size;
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const v = Math.round(morphed[y * size + x] * 255);
+    const cellSize = displaySize / INPUT_DIM;
+    for (let y = 0; y < INPUT_DIM; y++) {
+      for (let x = 0; x < INPUT_DIM; x++) {
+        const v = Math.round(morphed[y * INPUT_DIM + x] * 255);
         ctx.fillStyle = `rgb(${v}, ${v}, ${v})`;
         ctx.fillRect(x * cellSize, y * cellSize, cellSize + 0.5, cellSize + 0.5);
       }
@@ -95,7 +93,7 @@ export function DigitMorph({ slotA, slotB, onMorphPredict, onSaveSlot }: DigitMo
         <div className="morph-content">
           <canvas
             ref={canvasRef}
-            style={{ width: 140, height: 140 }}
+            style={{ width: MORPH_DISPLAY_SIZE, height: MORPH_DISPLAY_SIZE }}
             className="morph-canvas"
             role="img"
             aria-label={`Morphed digit — ${Math.round(morphT * 100)}% toward B`}

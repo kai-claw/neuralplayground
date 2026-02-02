@@ -8,6 +8,7 @@
 // Re-export neural network types for convenient access
 export type {
   ActivationFn,
+  NeuronStatus,
   LayerConfig,
   TrainingConfig,
   LayerState,

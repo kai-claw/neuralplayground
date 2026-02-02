@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { mulberry32, gaussianNoise } from '../utils';
+import { generateNoisePattern, applyNoise } from '../noise';
+import { pixelsToImageData } from '../rendering';
 import type { NoiseType } from '../types';
 import {
   ADVERSARIAL_DISPLAY_SIZE,
@@ -20,9 +21,6 @@ interface AdversarialLabProps {
   /** Predicted label */
   predictedLabel: number | null;
 }
-
-// Pre-allocated noise pattern (regenerated on seed change)
-const NOISE_PATTERN = new Float32Array(INPUT_DIM * INPUT_DIM);
 
 /**
  * Adversarial Noise Lab — gradually corrupt a drawing and watch the
@@ -59,64 +57,18 @@ export function AdversarialLab({
     canvas.height = ADVERSARIAL_DISPLAY_SIZE * dpr;
     ctx.scale(dpr, dpr);
 
-    // Generate reproducible noise
-    const rng = mulberry32(noiseSeed);
-    const len = INPUT_DIM * INPUT_DIM;
+    // Generate reproducible noise pattern and apply at current level
+    const pattern = generateNoisePattern(noiseType, noiseSeed, targetDigit);
+    const noised = applyNoise(currentInput, pattern, noiseLevel, noiseType, noiseSeed);
 
-    if (noiseType === 'gaussian') {
-      for (let i = 0; i < len; i++) {
-        NOISE_PATTERN[i] = gaussianNoise(rng);
-      }
-    } else if (noiseType === 'salt-pepper') {
-      for (let i = 0; i < len; i++) {
-        const r = rng();
-        // Each pixel has a chance of being flipped
-        if (r < 0.15) NOISE_PATTERN[i] = 1;       // salt (white)
-        else if (r < 0.30) NOISE_PATTERN[i] = -1;  // pepper (black)
-        else NOISE_PATTERN[i] = 0;
-      }
-    } else {
-      // "Adversarial" — gradient-like perturbation toward target
-      // Simple heuristic: push pixels toward a pattern that activates the target
-      for (let i = 0; i < len; i++) {
-        // Seeded semi-structured noise with spatial coherence
-        const x = i % INPUT_DIM;
-        const y = Math.floor(i / INPUT_DIM);
-        const cx = INPUT_DIM / 2;
-        const cy = INPUT_DIM / 2;
-        const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2) / (INPUT_DIM / 2);
-        // Target-dependent angular bias
-        const angle = Math.atan2(y - cy, x - cx);
-        const targetAngle = (targetDigit / 10) * Math.PI * 2;
-        const angleBias = Math.cos(angle - targetAngle);
-        NOISE_PATTERN[i] = (angleBias * (1 - dist) + gaussianNoise(rng) * 0.3);
-      }
-    }
-
-    // Apply noise to input
-    const noised = new Array<number>(len);
-    for (let i = 0; i < len; i++) {
-      if (noiseType === 'salt-pepper') {
-        // Salt-pepper: at noise level, flip or not
-        const flip = Math.abs(NOISE_PATTERN[i]) > 0.5;
-        if (flip && rng() < noiseLevel) {
-          noised[i] = NOISE_PATTERN[i] > 0 ? 1 : 0;
-        } else {
-          noised[i] = currentInput[i];
-        }
-      } else {
-        noised[i] = Math.max(0, Math.min(1, currentInput[i] + NOISE_PATTERN[i] * noiseLevel));
-      }
-    }
-
-    // Render
-    const scale = ADVERSARIAL_DISPLAY_SIZE / INPUT_DIM;
-    for (let y = 0; y < INPUT_DIM; y++) {
-      for (let x = 0; x < INPUT_DIM; x++) {
-        const v = Math.round(noised[y * INPUT_DIM + x] * 255);
-        ctx.fillStyle = `rgb(${v}, ${v}, ${v})`;
-        ctx.fillRect(x * scale, y * scale, scale + 0.5, scale + 0.5);
-      }
+    // Render noised image via shared rendering helper
+    const imgData = pixelsToImageData(noised, ADVERSARIAL_DISPLAY_SIZE);
+    // putImageData ignores canvas scale, so use an offscreen canvas
+    const offscreen = new OffscreenCanvas(ADVERSARIAL_DISPLAY_SIZE, ADVERSARIAL_DISPLAY_SIZE);
+    const offCtx = offscreen.getContext('2d');
+    if (offCtx) {
+      offCtx.putImageData(imgData, 0, 0);
+      ctx.drawImage(offscreen, 0, 0, ADVERSARIAL_DISPLAY_SIZE, ADVERSARIAL_DISPLAY_SIZE);
     }
 
     // Noise level overlay
