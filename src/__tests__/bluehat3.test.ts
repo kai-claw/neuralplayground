@@ -244,15 +244,25 @@ describe('Blue Hat #3 — Dream extraction to nn/dreams.ts', () => {
 // ═══════════════════════════════════════════════════════════════════
 
 describe('Blue Hat #3 — Module structure', () => {
-  it('nn/ directory has 5 files: NeuralNetwork, dreams, noise, sampleData, index', () => {
+  it('nn/ directory has expected files', () => {
     const nnDir = path.join(SRC, 'nn');
     const files = fs.readdirSync(nnDir).filter(f => f.endsWith('.ts')).sort();
     expect(files).toEqual([
       'NeuralNetwork.ts',
+      'ablation.ts',
+      'chimera.ts',
+      'confusion.ts',
+      'decisionBoundary.ts',
       'dreams.ts',
+      'epochReplay.ts',
+      'gradientFlow.ts',
       'index.ts',
+      'misfits.ts',
       'noise.ts',
+      'pca.ts',
+      'saliency.ts',
       'sampleData.ts',
+      'weightEvolution.ts',
     ]);
   });
 
@@ -261,6 +271,7 @@ describe('Blue Hat #3 — Module structure', () => {
     const files = fs.readdirSync(hooksDir).filter(f => f.endsWith('.ts')).sort();
     expect(files).toEqual([
       'index.ts',
+      'useActivationSpace.ts',
       'useCinematic.ts',
       'useContainerDims.ts',
       'useNeuralNetwork.ts',
@@ -272,7 +283,9 @@ describe('Blue Hat #3 — Module structure', () => {
     const dir = path.join(SRC, 'renderers');
     const files = fs.readdirSync(dir).filter(f => f.endsWith('.ts')).sort();
     expect(files).toEqual([
+      'confusionRenderer.ts',
       'dreamRenderer.ts',
+      'gradientFlowRenderer.ts',
       'index.ts',
       'pixelRendering.ts',
       'raceChart.ts',

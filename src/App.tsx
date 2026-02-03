@@ -1,7 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNeuralNetwork } from './hooks/useNeuralNetwork';
 import { useCinematic } from './hooks/useCinematic';
+import { useActivationSpace } from './hooks/useActivationSpace';
 import { canvasToInput } from './nn/sampleData';
+import { WeightEvolutionRecorder } from './nn/weightEvolution';
 import DrawingCanvas from './components/DrawingCanvas';
 import type { DrawingCanvasHandle } from './components/DrawingCanvas';
 import NetworkVisualizer from './components/NetworkVisualizer';
@@ -20,6 +22,16 @@ import TrainingRace from './components/TrainingRace';
 import StatsPanel from './components/StatsPanel';
 import HelpOverlay from './components/HelpOverlay';
 import ExperiencePanel from './components/ExperiencePanel';
+import SaliencyMap from './components/SaliencyMap';
+import ActivationSpace from './components/ActivationSpace';
+import ConfusionMatrix from './components/ConfusionMatrix';
+import GradientFlowMonitor from './components/GradientFlowMonitor';
+import EpochReplay from './components/EpochReplay';
+import DecisionBoundary from './components/DecisionBoundary';
+import ChimeraLab from './components/ChimeraLab';
+import MisfitGallery from './components/MisfitGallery';
+import WeightEvolution from './components/WeightEvolution';
+import AblationLab from './components/AblationLab';
 import {
   AUTO_TRAIN_EPOCHS,
   AUTO_TRAIN_DELAY,
@@ -31,6 +43,7 @@ import './App.css';
 function App() {
   const {
     state,
+    networkRef,
     initNetwork,
     startTraining,
     stopTraining,
@@ -41,6 +54,7 @@ function App() {
     getNeuronStatus,
     clearNeuronMasks,
     dream,
+    saliency: computeSaliency,
   } = useNeuralNetwork();
 
   const [livePrediction, setLivePrediction] = useState<number[] | null>(null);
@@ -54,6 +68,11 @@ function App() {
   // Signal flow animation trigger
   const [signalFlowTrigger, setSignalFlowTrigger] = useState(0);
 
+  // Weight evolution recorder
+  const weightRecorderRef = useRef(new WeightEvolutionRecorder());
+  // Trigger re-render when new frames are recorded
+  const [, setWeightFrameTick] = useState(0);
+
   // Drawing canvas ref for programmatic drawing
   const drawingCanvasRef = useRef<DrawingCanvasHandle>(null);
 
@@ -63,6 +82,23 @@ function App() {
 
   // Adversarial lab — track current drawing as pixel array
   const [currentDrawingInput, setCurrentDrawingInput] = useState<number[] | null>(null);
+
+  // Saliency map — computed from current input + predicted label
+  const saliencyData = useMemo(() => {
+    if (!currentDrawingInput || predictedLabel === null || state.epoch === 0) return null;
+    return computeSaliency(currentDrawingInput, predictedLabel);
+  }, [currentDrawingInput, predictedLabel, state.epoch, computeSaliency]);
+
+  // ─── Record weight evolution on each epoch ───
+  useEffect(() => {
+    if (state.snapshot && state.epoch > 0) {
+      weightRecorderRef.current.record(state.snapshot);
+      setWeightFrameTick(prev => prev + 1);
+    }
+  }, [state.epoch, state.snapshot]);
+
+  // ─── Activation space projection ───
+  const activationProjection = useActivationSpace(networkRef, state.epoch, currentDrawingInput);
 
   // ─── Cinematic demo (extracted hook) ───
   const { cinematic, startCinematic, stopCinematic } = useCinematic({
@@ -99,6 +135,8 @@ function App() {
     setPredictedLabel(null);
     setPredictionLayers(null);
     setCurrentDrawingInput(null);
+    weightRecorderRef.current.clear();
+    setWeightFrameTick(0);
   }, [initNetwork, state.config]);
 
   // ─── Save morph slot from current drawing ───
@@ -221,6 +259,13 @@ function App() {
               <DrawingCanvas ref={drawingCanvasRef} onDraw={handleDraw} />
             </div>
             <PredictionBar probabilities={livePrediction} />
+
+            <SaliencyMap
+              saliency={saliencyData}
+              currentInput={currentDrawingInput}
+              predictedLabel={predictedLabel}
+              hasTrained={state.epoch > 0}
+            />
           </div>
 
           <div className="column column-center">
@@ -280,6 +325,50 @@ function App() {
             hasTrained={state.epoch > 0}
           />
           <TrainingRace />
+          <ActivationSpace
+            projection={activationProjection}
+            epoch={state.epoch}
+            predictedLabel={predictedLabel}
+          />
+          <ConfusionMatrix
+            networkRef={networkRef}
+            epoch={state.epoch}
+            isTraining={state.isTraining}
+          />
+          <GradientFlowMonitor
+            networkRef={networkRef}
+            epoch={state.epoch}
+            layers={displayLayers}
+          />
+          <EpochReplay
+            epoch={state.epoch}
+            isTraining={state.isTraining}
+            snapshot={state.snapshot}
+            currentInput={currentDrawingInput}
+            activationFn={state.config.layers[0]?.activation || 'relu'}
+          />
+          <DecisionBoundary
+            networkRef={networkRef}
+            epoch={state.epoch}
+            isTraining={state.isTraining}
+          />
+          <ChimeraLab
+            networkRef={networkRef}
+            hasTrained={state.epoch > 0}
+          />
+          <MisfitGallery
+            networkRef={networkRef}
+            epoch={state.epoch}
+            isTraining={state.isTraining}
+          />
+          <WeightEvolution
+            frames={weightRecorderRef.current.getFrames()}
+          />
+          <AblationLab
+            networkRef={networkRef}
+            epoch={state.epoch}
+            isTraining={state.isTraining}
+          />
         </div>
       </main>
 

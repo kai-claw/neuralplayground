@@ -64,3 +64,10 @@ export interface DreamResult {
   image: number[];
   confidenceHistory: number[];
 }
+
+/** Activation space 2D projection data */
+export interface ProjectionData {
+  points: [number, number][];
+  labels: number[];
+  userProjection: [number, number] | null;
+}

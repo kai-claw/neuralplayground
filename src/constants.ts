@@ -120,3 +120,57 @@ export const DREAM_ANIMATION_INTERVAL = 40; // ms per dream step
 export const RACE_EPOCHS = 50;
 export const RACE_STEP_INTERVAL = 40; // ms between race epochs
 export const RACE_CHART_HEIGHT = 140;
+
+// ─── Saliency Map ───────────────────────────────────────────────────
+
+export const SALIENCY_DISPLAY_SIZE = 160;
+export const SALIENCY_HOT_THRESHOLD = 0.3; // pixels above this are "important"
+
+// ─── Activation Space ───────────────────────────────────────────────
+
+export const ACTIVATION_SPACE_SAMPLES_PER_DIGIT = 8; // 80 total samples for projection
+export const ACTIVATION_SPACE_DEFAULT = { width: 380, height: 280 };
+export const ACTIVATION_SPACE_ASPECT = 0.74;
+
+// ─── Confusion Matrix ───────────────────────────────────────────────
+
+export const CONFUSION_SAMPLES_PER_DIGIT = 15; // 150 total samples for confusion eval
+
+// ─── Gradient Flow Monitor ──────────────────────────────────────────
+
+export const GRADIENT_FLOW_SAMPLE_COUNT = 2; // samples for gradient measurement (small = fast)
+
+// ─── Epoch Replay (Training Time Machine) ───────────────────────────
+
+export const EPOCH_REPLAY_DISPLAY = { width: 380, height: 200 };
+export const EPOCH_REPLAY_ASPECT = 0.53;
+
+// ─── Decision Boundary Map ──────────────────────────────────────────
+
+export const DECISION_BOUNDARY_DISPLAY = { width: 280, height: 280 };
+export const DECISION_BOUNDARY_RESOLUTION = 32; // grid cells per axis
+
+// ─── Chimera Lab ────────────────────────────────────────────────────
+
+export const CHIMERA_DISPLAY_SIZE = 160;
+export const CHIMERA_STEPS = 80;
+export const CHIMERA_LR = 0.5;
+export const CHIMERA_ANIMATION_INTERVAL = 40; // ms per animated step
+
+// ─── Misfit Gallery ─────────────────────────────────────────────────
+
+export const MISFIT_DISPLAY_SIZE = 48;
+export const MISFIT_GALLERY_COUNT = 24; // max misfits to show
+
+// ─── Weight Evolution Filmstrip ─────────────────────────────────────
+
+export const WEIGHT_EVOLUTION_CELL_SIZE = 34;
+export const WEIGHT_EVOLUTION_MAX_NEURONS = 24; // max neurons to display
+export const WEIGHT_EVOLUTION_PLAYBACK_INTERVAL = 120; // ms per frame during playback
+
+// ─── Ablation Lab ───────────────────────────────────────────────────
+
+export const ABLATION_CELL_SIZE = 20;
+export const ABLATION_CELL_GAP = 3;
+export const ABLATION_MAX_NEURONS_PER_LAYER = 32;
+export const ABLATION_SAMPLES_PER_DIGIT = 8; // 80 total samples for ablation eval

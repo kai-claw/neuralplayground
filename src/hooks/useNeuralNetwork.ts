@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { NeuralNetwork } from '../nn/NeuralNetwork';
 import { computeInputGradient, dream as networkDream } from '../nn/dreams';
+import { computeSaliency as _computeSaliency } from '../nn/saliency';
 import type { TrainingConfig, TrainingSnapshot, LayerConfig, NeuronStatus, DreamResult } from '../types';
 import { generateTrainingData } from '../nn/sampleData';
 import { DEFAULT_CONFIG, DEFAULT_SAMPLES_PER_DIGIT, TRAINING_STEP_INTERVAL } from '../constants';
@@ -141,8 +142,17 @@ export function useNeuralNetwork() {
     return networkDream(networkRef.current, targetClass, steps, lr, startImage);
   }, []);
 
+  const saliency = useCallback((
+    input: number[],
+    targetClass: number,
+  ): Float32Array | null => {
+    if (!networkRef.current) return null;
+    return _computeSaliency(networkRef.current, input, targetClass);
+  }, []);
+
   return {
     state,
+    networkRef,
     initNetwork,
     startTraining,
     stopTraining,
@@ -154,5 +164,6 @@ export function useNeuralNetwork() {
     clearNeuronMasks,
     computeInputGradient: computeGradient,
     dream,
+    saliency,
   };
 }

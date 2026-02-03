@@ -33,3 +33,15 @@ export {
   pixelsToImageData,
   lerpPixels,
 } from './pixelRendering';
+
+export {
+  drawConfusionMatrix,
+  hitTestConfusion,
+  CONFUSION_CANVAS_SIZE,
+} from './confusionRenderer';
+
+export {
+  drawGradientFlow,
+  getGradientFlowHeight,
+  GRADIENT_FLOW_WIDTH,
+} from './gradientFlowRenderer';
