@@ -275,6 +275,7 @@ describe('Blue Hat #3 — Module structure', () => {
       'useCinematic.ts',
       'useContainerDims.ts',
       'useNeuralNetwork.ts',
+      'usePerformanceMonitor.ts',
       'useTrainingRace.ts',
     ]);
   });

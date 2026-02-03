@@ -23,7 +23,6 @@ import type {
 import {
   activate,
   activateDerivative,
-  softmax,
   xavierInit,
   argmax,
 } from '../utils';
@@ -39,6 +38,12 @@ export class NeuralNetwork {
   private lossHistory: number[] = [];
   private accuracyHistory: number[] = [];
   private neuronMasks: Map<string, NeuronStatus> = new Map();
+
+  // ─── Pre-allocated scratch arrays (avoid per-call GC) ───────────
+  private _scratchTarget: number[] = new Array(10).fill(0);
+  private _scratchDeltas: number[] = [];
+  private _scratchNewDeltas: number[] = [];
+  private _scratchIndices: number[] = [];
 
   constructor(inputSize: number, config: TrainingConfig) {
     this.config = config;
@@ -136,36 +141,53 @@ export class NeuralNetwork {
       const layer = this.layers[l];
       const isOutput = l === this.layers.length - 1;
       const activation = isOutput ? 'sigmoid' : this.config.layers[l]?.activation || 'relu';
+      const numNeurons = layer.weights.length;
+
+      // Reuse preActivations/activations arrays in-place (avoid allocation)
+      const preAct = layer.preActivations;
+      const act = layer.activations;
       
-      const preAct: number[] = [];
-      const act: number[] = [];
-      
-      for (let j = 0; j < layer.weights.length; j++) {
+      for (let j = 0; j < numNeurons; j++) {
+        const wj = layer.weights[j];
         let sum = layer.biases[j];
         for (let i = 0; i < current.length; i++) {
-          sum += layer.weights[j][i] * current[i];
+          sum += wj[i] * current[i];
         }
         // NaN/Infinity guard
         if (!isFinite(sum)) sum = 0;
-        preAct.push(sum);
-        act.push(isOutput ? sum : activate(sum, activation as ActivationFn));
+        preAct[j] = sum;
+        act[j] = isOutput ? sum : activate(sum, activation as ActivationFn);
       }
-      
-      layer.preActivations = preAct;
       
       if (isOutput) {
-        layer.activations = softmax(preAct);
+        // In-place softmax to avoid allocation
+        let maxVal = act[0];
+        for (let i = 1; i < numNeurons; i++) {
+          if (act[i] > maxVal) maxVal = act[i];
+        }
+        let sumExp = 0;
+        for (let i = 0; i < numNeurons; i++) {
+          act[i] = Math.exp(act[i] - maxVal);
+          sumExp += act[i];
+        }
+        if (sumExp > 0 && isFinite(sumExp)) {
+          for (let i = 0; i < numNeurons; i++) act[i] /= sumExp;
+        } else {
+          const uniform = 1 / numNeurons;
+          for (let i = 0; i < numNeurons; i++) act[i] = uniform;
+        }
       } else {
         // Apply neuron surgery masks
-        for (let j = 0; j < act.length; j++) {
-          if (this.neuronMasks.get(`${l}-${j}`) === 'killed') {
-            act[j] = 0;
+        if (this.neuronMasks.size > 0) {
+          for (let j = 0; j < numNeurons; j++) {
+            if (this.neuronMasks.get(`${l}-${j}`) === 'killed') {
+              act[j] = 0;
+            }
           }
         }
-        layer.activations = act;
       }
       
-      current = layer.activations;
+      current = act;
     }
     
     return current;
@@ -176,44 +198,63 @@ export class NeuralNetwork {
   private backward(input: number[], target: number[]): void {
     const lr = this.config.learningRate;
     const numLayers = this.layers.length;
+    const hasMasks = this.neuronMasks.size > 0;
     
     const outputLayer = this.layers[numLayers - 1];
-    let deltas: number[] = outputLayer.activations.map((a, i) => a - target[i]);
+    const outputSize = outputLayer.activations.length;
+
+    // Reuse scratch deltas array
+    if (this._scratchDeltas.length < outputSize) {
+      this._scratchDeltas = new Array(outputSize);
+    }
+    for (let i = 0; i < outputSize; i++) {
+      this._scratchDeltas[i] = outputLayer.activations[i] - target[i];
+    }
+    let deltas = this._scratchDeltas;
     
     for (let l = numLayers - 1; l >= 0; l--) {
       const layer = this.layers[l];
       const prevActivations = l > 0 ? this.layers[l - 1].activations : input;
+      const numNeurons = layer.weights.length;
       
-      for (let j = 0; j < layer.weights.length; j++) {
-        const status = this.neuronMasks.get(`${l}-${j}`);
-        if (status === 'frozen' || status === 'killed') continue;
+      for (let j = 0; j < numNeurons; j++) {
+        if (hasMasks) {
+          const status = this.neuronMasks.get(`${l}-${j}`);
+          if (status === 'frozen' || status === 'killed') continue;
+        }
 
-        for (let i = 0; i < layer.weights[j].length; i++) {
-          const grad = lr * deltas[j] * prevActivations[i];
+        const wj = layer.weights[j];
+        const delta_j = deltas[j];
+        const scaledDelta = lr * delta_j;
+        for (let i = 0; i < wj.length; i++) {
+          const grad = scaledDelta * prevActivations[i];
           if (isFinite(grad)) {
-            layer.weights[j][i] -= grad;
+            wj[i] -= grad;
           }
         }
-        const biasGrad = lr * deltas[j];
-        if (isFinite(biasGrad)) {
-          layer.biases[j] -= biasGrad;
+        if (isFinite(scaledDelta)) {
+          layer.biases[j] -= scaledDelta;
         }
       }
       
       if (l > 0) {
         const prevLayer = this.layers[l - 1];
         const activation = this.config.layers[l - 1]?.activation || 'relu';
-        const newDeltas: number[] = new Array(prevLayer.weights.length).fill(0);
-        
-        for (let i = 0; i < prevLayer.weights.length; i++) {
+        const prevSize = prevLayer.weights.length;
+
+        // Reuse scratch newDeltas array
+        if (this._scratchNewDeltas.length < prevSize) {
+          this._scratchNewDeltas = new Array(prevSize);
+        }
+        for (let i = 0; i < prevSize; i++) {
           let sum = 0;
-          for (let j = 0; j < layer.weights.length; j++) {
+          for (let j = 0; j < numNeurons; j++) {
             sum += layer.weights[j][i] * deltas[j];
           }
           const d = sum * activateDerivative(prevLayer.preActivations[i], activation as ActivationFn);
-          newDeltas[i] = isFinite(d) ? d : 0;
+          this._scratchNewDeltas[i] = isFinite(d) ? d : 0;
         }
-        deltas = newDeltas;
+        deltas = this._scratchNewDeltas;
       }
     }
   }
@@ -223,20 +264,34 @@ export class NeuralNetwork {
   trainBatch(inputs: number[][], labels: number[]): TrainingSnapshot {
     let totalLoss = 0;
     let correct = 0;
+    const batchSize = inputs.length;
     
-    const indices = Array.from({ length: inputs.length }, (_, i) => i);
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
+    // Reuse indices array (avoid allocation per batch)
+    if (this._scratchIndices.length !== batchSize) {
+      this._scratchIndices = Array.from({ length: batchSize }, (_, i) => i);
+    } else {
+      // Reset values (they get shuffled)
+      for (let i = 0; i < batchSize; i++) this._scratchIndices[i] = i;
     }
+    const indices = this._scratchIndices;
+    for (let i = batchSize - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = indices[i]; indices[i] = indices[j]; indices[j] = tmp;
+    }
+
+    // Reuse target array (avoid 10-element allocation per sample)
+    const target = this._scratchTarget;
     
+    // Reference to output layer activations (set after final forward call)
     let lastProbs: number[] = [];
     
-    for (const idx of indices) {
+    for (let s = 0; s < batchSize; s++) {
+      const idx = indices[s];
       const input = inputs[idx];
       const label = labels[idx];
       
-      const target = new Array(10).fill(0);
+      // Zero-fill and set one-hot in-place
+      for (let t = 0; t < 10; t++) target[t] = 0;
       target[label] = 1;
       
       const output = this.forward(input);
@@ -252,18 +307,22 @@ export class NeuralNetwork {
     }
     
     this.epoch++;
-    const avgLoss = totalLoss / inputs.length;
-    const accuracy = correct / inputs.length;
+    const avgLoss = totalLoss / batchSize;
+    const accuracy = correct / batchSize;
     this.lossHistory.push(avgLoss);
     this.accuracyHistory.push(accuracy);
+
+    const bestIdx = argmax(lastProbs);
+    const predictions = new Array(lastProbs.length);
+    for (let i = 0; i < lastProbs.length; i++) predictions[i] = i === bestIdx ? 1 : 0;
     
     return {
       epoch: this.epoch,
       loss: avgLoss,
       accuracy,
       layers: this.snapshotLayers(),
-      predictions: lastProbs.map((_, i) => i === argmax(lastProbs) ? 1 : 0),
-      outputProbabilities: lastProbs,
+      predictions,
+      outputProbabilities: [...lastProbs],
     };
   }
 
@@ -274,7 +333,7 @@ export class NeuralNetwork {
     const label = argmax(output);
     return {
       label,
-      probabilities: output,
+      probabilities: output.slice(), // copy — forward() returns a live array reference
       layers: this.snapshotLayers(),
     };
   }

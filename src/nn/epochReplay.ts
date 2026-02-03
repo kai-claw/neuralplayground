@@ -35,6 +35,8 @@ export interface LayerParams {
 export class EpochRecorder {
   private snapshots: EpochSnapshot[] = [];
   private maxSnapshots: number;
+  private recordInterval = 1;
+  private framesSinceLastRecord = 0;
 
   constructor(maxSnapshots = 200) {
     this.maxSnapshots = maxSnapshots;
@@ -42,17 +44,35 @@ export class EpochRecorder {
 
   /** Record a training snapshot (deep-copies weights). */
   record(snapshot: TrainingSnapshot): void {
+    this.framesSinceLastRecord++;
+    if (this.framesSinceLastRecord < this.recordInterval) return;
+    this.framesSinceLastRecord = 0;
+
+    // Thin out when at capacity (same strategy as WeightEvolutionRecorder)
     if (this.snapshots.length >= this.maxSnapshots) {
-      // Thin out: keep every other snapshot when at capacity
-      if (this.snapshots.length > 0 && this.snapshots.length % 2 === 0) {
-        return; // skip every other to stay under budget
+      const thinned: EpochSnapshot[] = [];
+      for (let i = 0; i < this.snapshots.length; i += 2) {
+        thinned.push(this.snapshots[i]);
       }
+      this.snapshots = thinned;
+      this.recordInterval *= 2;
     }
 
-    const params: LayerParams[] = snapshot.layers.map(layer => ({
-      weights: layer.weights.map(w => [...w]),
-      biases: [...layer.biases],
-    }));
+    // Deep-copy weights (necessary for immutable snapshots)
+    const numLayers = snapshot.layers.length;
+    const params: LayerParams[] = new Array(numLayers);
+    for (let l = 0; l < numLayers; l++) {
+      const layer = snapshot.layers[l];
+      const numNeurons = layer.weights.length;
+      const weights: number[][] = new Array(numNeurons);
+      for (let n = 0; n < numNeurons; n++) {
+        weights[n] = layer.weights[n].slice(); // slice() faster than spread
+      }
+      params[l] = {
+        weights,
+        biases: layer.biases.slice(),
+      };
+    }
 
     this.snapshots.push({
       epoch: snapshot.epoch,

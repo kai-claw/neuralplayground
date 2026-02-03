@@ -174,3 +174,11 @@ export const ABLATION_CELL_SIZE = 20;
 export const ABLATION_CELL_GAP = 3;
 export const ABLATION_MAX_NEURONS_PER_LAYER = 32;
 export const ABLATION_SAMPLES_PER_DIGIT = 8; // 80 total samples for ablation eval
+
+// ─── Performance Monitor ────────────────────────────────────────────
+
+export const PERF_SAMPLE_INTERVAL = 1000; // ms between FPS samples
+export const PERF_DEGRADE_FPS = 30; // FPS threshold for auto-degradation
+export const PERF_RECOVER_FPS = 45; // FPS threshold for auto-recovery
+export const PERF_DEGRADE_SECONDS = 3; // sustained seconds before degrading
+export const PERF_RECOVER_SECONDS = 5; // sustained seconds before recovering

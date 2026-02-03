@@ -161,7 +161,11 @@ export default function EpochReplay({
     const plotH = height - pad.top - pad.bottom;
 
     // Draw loss/accuracy curves (background context)
-    const maxLoss = Math.max(3, ...timeline.map(s => s.loss));
+    // Stack-safe max — avoids Math.max(...spread) RangeError with many epochs
+    let maxLoss = 3;
+    for (let i = 0; i < totalSnapshots; i++) {
+      if (timeline[i].loss > maxLoss) maxLoss = timeline[i].loss;
+    }
 
     // Loss curve (dim red)
     ctx.strokeStyle = 'rgba(255, 99, 132, 0.3)';

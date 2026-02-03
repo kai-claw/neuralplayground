@@ -78,9 +78,14 @@ export function saliencyToColor(value: number): [number, number, number, number]
   return [r, g, b, a];
 }
 
+// Cached ImageData for saliency overlay rendering
+const _saliencyCache = new Map<number, ImageData>();
+
 /**
  * Render saliency map as an ImageData overlay.
  * Composites: dim original digit + bright saliency heatmap.
+ *
+ * NOTE: Returns a cached ImageData. Callers must consume before next call.
  */
 export function renderSaliencyOverlay(
   input: number[],
@@ -88,7 +93,11 @@ export function renderSaliencyOverlay(
   size: number,
 ): ImageData {
   const dim = 28;
-  const imageData = new ImageData(size, size);
+  let imageData = _saliencyCache.get(size);
+  if (!imageData) {
+    imageData = new ImageData(size, size);
+    _saliencyCache.set(size, imageData);
+  }
   const data = imageData.data;
   const scale = size / dim;
 

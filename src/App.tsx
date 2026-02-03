@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNeuralNetwork } from './hooks/useNeuralNetwork';
 import { useCinematic } from './hooks/useCinematic';
 import { useActivationSpace } from './hooks/useActivationSpace';
+import { usePerformanceMonitor } from './hooks/usePerformanceMonitor';
 import { canvasToInput } from './nn/sampleData';
 import { WeightEvolutionRecorder } from './nn/weightEvolution';
 import DrawingCanvas from './components/DrawingCanvas';
@@ -61,6 +62,9 @@ function App() {
   const [predictedLabel, setPredictedLabel] = useState<number | null>(null);
   const [predictionLayers, setPredictionLayers] = useState<NonNullable<typeof state.snapshot>['layers'] | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+
+  // ─── Performance monitoring ───
+  const perfState = usePerformanceMonitor();
 
   // Auto-start flag
   const autoStartedRef = useRef(false);
@@ -228,6 +232,15 @@ function App() {
           <span className="logo-icon" aria-hidden="true">🧬</span>
           <h1>NeuralPlayground</h1>
           <span className={`heartbeat-dot ${state.isTraining ? 'active' : state.epoch > 0 ? 'idle' : 'off'}`} aria-hidden="true" title={state.isTraining ? 'Training…' : state.epoch > 0 ? 'Paused' : 'Not started'} />
+          {state.isTraining && (
+            <span
+              className={`fps-badge ${perfState.fps >= 45 ? 'fps-good' : perfState.fps >= 30 ? 'fps-warn' : 'fps-bad'}`}
+              title={`${perfState.fps} FPS${perfState.degraded ? ' — quality reduced' : ''}`}
+              aria-hidden="true"
+            >
+              {perfState.fps} fps{perfState.degraded ? ' ⚠' : ''}
+            </span>
+          )}
         </div>
         <p className="subtitle">Watch neural networks learn in real-time</p>
       </header>

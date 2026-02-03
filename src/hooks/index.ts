@@ -10,3 +10,4 @@ export { useCinematic } from './useCinematic';
 export { useContainerDims } from './useContainerDims';
 export { useTrainingRace } from './useTrainingRace';
 export { useActivationSpace } from './useActivationSpace';
+export { usePerformanceMonitor, type PerformanceState } from './usePerformanceMonitor';

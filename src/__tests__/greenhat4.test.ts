@@ -523,9 +523,10 @@ describe('Green Hat #2 — Cross-feature integration', () => {
   });
 
   it('weight delta increases during early training', () => {
+    // Use sigmoid activation to avoid dead-neuron ReLU issue with small networks
     const network = new NeuralNetwork(784, {
       learningRate: 0.05, // higher LR for visible changes
-      layers: [{ neurons: 8, activation: 'relu' }],
+      layers: [{ neurons: 16, activation: 'sigmoid' }],
     });
     const data = generateTrainingData(5);
     const recorder = new WeightEvolutionRecorder();

@@ -40,8 +40,10 @@ export default function WeightEvolution({ frames }: WeightEvolutionProps) {
   const cols = Math.min(displayNeurons, 8);
   const rows = Math.ceil(displayNeurons / cols);
 
-  // Pre-allocated ImageData for rendering
+  // Pre-allocated ImageData and offscreen canvas for rendering (avoid createElement per neuron)
   const imageDataRef = useRef<ImageData | null>(null);
+  const offscreenRef = useRef<HTMLCanvasElement | null>(null);
+  const offscreenCtxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   // Render the neuron weight grid
   useEffect(() => {
@@ -64,6 +66,18 @@ export default function WeightEvolution({ frames }: WeightEvolutionProps) {
     }
     const imgData = imageDataRef.current;
 
+    // Reuse a single offscreen canvas (avoid createElement per neuron per render)
+    if (!offscreenRef.current || offscreenRef.current.width !== dim) {
+      offscreenRef.current = document.createElement('canvas');
+      offscreenRef.current.width = dim;
+      offscreenRef.current.height = dim;
+      offscreenCtxRef.current = offscreenRef.current.getContext('2d');
+    }
+    const tmpCtx = offscreenCtxRef.current;
+    if (!tmpCtx) return;
+
+    ctx.imageSmoothingEnabled = false;
+
     for (let n = 0; n < displayNeurons; n++) {
       renderNeuronWeights(frame.weights, n, inputSize, imgData);
 
@@ -72,15 +86,9 @@ export default function WeightEvolution({ frames }: WeightEvolutionProps) {
       const x = col * (cellSize + 2) + 2;
       const y = row * (cellSize + 2) + 2;
 
-      // Scale up the dim×dim image to cellSize×cellSize
-      const tmpCanvas = document.createElement('canvas');
-      tmpCanvas.width = dim;
-      tmpCanvas.height = dim;
-      const tmpCtx = tmpCanvas.getContext('2d')!;
+      // Reuse single offscreen canvas for putImageData → drawImage upscale
       tmpCtx.putImageData(imgData, 0, 0);
-
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(tmpCanvas, x, y, cellSize, cellSize);
+      ctx.drawImage(offscreenRef.current!, x, y, cellSize, cellSize);
 
       // Highlight selected neuron
       if (selectedNeuron === n) {
@@ -90,6 +98,10 @@ export default function WeightEvolution({ frames }: WeightEvolutionProps) {
       }
     }
   }, [frame, displayNeurons, cols, rows, cellSize, dim, inputSize, selectedNeuron]);
+
+  // Pre-allocated magnifier offscreen canvas
+  const magOffscreenRef = useRef<HTMLCanvasElement | null>(null);
+  const magOffscreenCtxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   // Render magnified view of selected neuron
   useEffect(() => {
@@ -107,14 +119,19 @@ export default function WeightEvolution({ frames }: WeightEvolutionProps) {
     }
     renderNeuronWeights(frame.weights, selectedNeuron, inputSize, imageDataRef.current);
 
-    const tmpCanvas = document.createElement('canvas');
-    tmpCanvas.width = dim;
-    tmpCanvas.height = dim;
-    const tmpCtx = tmpCanvas.getContext('2d')!;
+    // Reuse offscreen canvas for magnifier
+    if (!magOffscreenRef.current || magOffscreenRef.current.width !== dim) {
+      magOffscreenRef.current = document.createElement('canvas');
+      magOffscreenRef.current.width = dim;
+      magOffscreenRef.current.height = dim;
+      magOffscreenCtxRef.current = magOffscreenRef.current.getContext('2d');
+    }
+    const tmpCtx = magOffscreenCtxRef.current;
+    if (!tmpCtx) return;
     tmpCtx.putImageData(imageDataRef.current, 0, 0);
 
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(tmpCanvas, 0, 0, magSize, magSize);
+    ctx.drawImage(magOffscreenRef.current!, 0, 0, magSize, magSize);
   }, [frame, selectedNeuron, dim, inputSize]);
 
   // Playback timer

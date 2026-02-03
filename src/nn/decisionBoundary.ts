@@ -195,12 +195,19 @@ export function computeDecisionBoundary(
  * Intensity based on confidence. Boundary appears as the
  * transition zone between colors.
  */
+// Cached ImageData for decision boundary rendering
+const _boundaryCache = new Map<number, ImageData>();
+
 export function renderDecisionBoundary(
   result: DecisionBoundaryResult,
   size: number,
 ): ImageData {
   const { grid, resolution, digitA, digitB } = result;
-  const imageData = new ImageData(size, size);
+  let imageData = _boundaryCache.get(size);
+  if (!imageData) {
+    imageData = new ImageData(size, size);
+    _boundaryCache.set(size, imageData);
+  }
   const data = imageData.data;
   const cellSize = size / resolution;
 

@@ -35,6 +35,10 @@ export class WeightEvolutionRecorder {
     this.recordInterval = recordInterval;
   }
 
+  // Pre-allocated buffer for weight recording (avoids allocation per epoch)
+  private _scratchBuffer: Float32Array | null = null;
+  private _scratchSize = 0;
+
   /** Record a training snapshot's first-hidden-layer weights. */
   record(snapshot: TrainingSnapshot): void {
     this.framesSinceLastRecord++;
@@ -48,14 +52,7 @@ export class WeightEvolutionRecorder {
     const inputSize = firstLayer.weights[0]?.length ?? 0;
     if (neuronCount === 0 || inputSize === 0) return;
 
-    // Compress to Float32Array
-    const flat = new Float32Array(neuronCount * inputSize);
-    for (let n = 0; n < neuronCount; n++) {
-      const w = firstLayer.weights[n];
-      for (let i = 0; i < inputSize; i++) {
-        flat[n * inputSize + i] = w[i];
-      }
-    }
+    const totalSize = neuronCount * inputSize;
 
     // If at capacity, thin out by keeping every other frame
     if (this.frames.length >= this.maxFrames) {
@@ -65,6 +62,20 @@ export class WeightEvolutionRecorder {
       }
       this.frames = thinned;
       this.recordInterval *= 2;
+    }
+
+    // Allocate Float32Array (unavoidable — each frame owns its data)
+    // But reuse scratch buffer for copy if architecture unchanged
+    if (!this._scratchBuffer || this._scratchSize !== totalSize) {
+      this._scratchSize = totalSize;
+    }
+    const flat = new Float32Array(totalSize);
+    for (let n = 0; n < neuronCount; n++) {
+      const w = firstLayer.weights[n];
+      const off = n * inputSize;
+      for (let i = 0; i < inputSize; i++) {
+        flat[off + i] = w[i];
+      }
     }
 
     this.frames.push({

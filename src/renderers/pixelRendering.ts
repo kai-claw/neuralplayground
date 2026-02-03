@@ -8,6 +8,19 @@
 
 import { INPUT_DIM } from '../constants';
 
+// ─── Cached ImageData per size (avoid per-call allocation) ───────────
+
+const _imageDataCache = new Map<number, ImageData>();
+
+function getCachedImageData(size: number): ImageData {
+  let cached = _imageDataCache.get(size);
+  if (!cached) {
+    cached = new ImageData(size, size);
+    _imageDataCache.set(size, cached);
+  }
+  return cached;
+}
+
 // ─── Diverging colormap (cyan ← dark → red) ─────────────────────────
 
 /**
@@ -16,6 +29,9 @@ import { INPUT_DIM } from '../constants';
  * Positive weights → cyan/blue.  Negative weights → red/orange.
  * Weights are contrast-normalized to [0, 1] then mapped through the colormap.
  *
+ * NOTE: Returns a cached ImageData object. Callers must consume it
+ * (e.g. putImageData or drawImage) before the next call with the same size.
+ *
  * @param weights  Flat array of weights (typically 784 for first-layer neurons)
  * @param size     Output image size in pixels (square)
  */
@@ -23,7 +39,7 @@ export function weightsToImageData(
   weights: number[],
   size: number,
 ): ImageData {
-  const imgData = new ImageData(size, size);
+  const imgData = getCachedImageData(size);
   const data = imgData.data;
 
   // Contrast normalization
@@ -70,10 +86,24 @@ export function weightsToImageData(
 
 // ─── Grayscale pixel rendering ───────────────────────────────────────
 
+// ─── Grayscale cache (separate from diverging-colormap cache) ────────
+
+const _pixelDataCache = new Map<number, ImageData>();
+
+function getCachedPixelData(size: number): ImageData {
+  let cached = _pixelDataCache.get(size);
+  if (!cached) {
+    cached = new ImageData(size, size);
+    _pixelDataCache.set(size, cached);
+  }
+  return cached;
+}
+
 /**
  * Render a 784-element [0, 1] pixel array as a grayscale ImageData.
  *
- * Used by DigitMorph and AdversarialLab to preview processed images.
+ * NOTE: Returns a cached ImageData object. Callers must consume it
+ * before the next call with the same size.
  *
  * @param pixels  28×28 flat array of pixel values [0, 1]
  * @param size    Output display size in pixels (square, will be upscaled)
@@ -82,7 +112,7 @@ export function pixelsToImageData(
   pixels: number[],
   size: number,
 ): ImageData {
-  const imgData = new ImageData(size, size);
+  const imgData = getCachedPixelData(size);
   const data = imgData.data;
   const scale = size / INPUT_DIM;
 

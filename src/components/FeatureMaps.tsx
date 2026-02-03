@@ -40,6 +40,10 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
   /** Render a single neuron's weights as a diverging colormap ImageData */
   const renderNeuronToImageData = useCallback(weightsToImageData, []);
 
+  // Pre-allocated offscreen canvas for grid rendering (avoids createElement per neuron)
+  const gridOffscreenRef = useRef<HTMLCanvasElement | null>(null);
+  const gridOffscreenCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+
   // Render the grid of mini feature maps
   useEffect(() => {
     const canvas = gridCanvasRef.current;
@@ -59,6 +63,15 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, gridW, gridH);
 
+    // Reuse single offscreen canvas for all neuron tiles
+    if (!gridOffscreenRef.current || gridOffscreenRef.current.width !== FEATURE_MAP_CELL_SIZE) {
+      gridOffscreenRef.current = document.createElement('canvas');
+      gridOffscreenRef.current.width = FEATURE_MAP_CELL_SIZE;
+      gridOffscreenRef.current.height = FEATURE_MAP_CELL_SIZE;
+      gridOffscreenCtxRef.current = gridOffscreenRef.current.getContext('2d');
+    }
+    const offCtx = gridOffscreenCtxRef.current;
+
     for (let n = 0; n < firstLayer.weights.length; n++) {
       const col = n % cols;
       const row = Math.floor(n / cols);
@@ -67,14 +80,10 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
 
       const imgData = renderNeuronToImageData(firstLayer.weights[n], FEATURE_MAP_CELL_SIZE);
 
-      // Draw onto an offscreen canvas first (putImageData ignores scale)
-      const offscreen = document.createElement('canvas');
-      offscreen.width = FEATURE_MAP_CELL_SIZE;
-      offscreen.height = FEATURE_MAP_CELL_SIZE;
-      const offCtx = offscreen.getContext('2d');
+      // Reuse single offscreen canvas (putImageData ignores scale)
       if (offCtx) {
         offCtx.putImageData(imgData, 0, 0);
-        ctx.drawImage(offscreen, x, y, FEATURE_MAP_CELL_SIZE, FEATURE_MAP_CELL_SIZE);
+        ctx.drawImage(gridOffscreenRef.current!, x, y, FEATURE_MAP_CELL_SIZE, FEATURE_MAP_CELL_SIZE);
       }
 
       // Hover highlight
@@ -102,6 +111,10 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
     }
   }, [firstLayer, gridDims, hoveredNeuron, renderNeuronToImageData]);
 
+  // Pre-allocated magnifier offscreen canvas
+  const magOffscreenRef = useRef<HTMLCanvasElement | null>(null);
+  const magOffscreenCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+
   // Render magnified view of hovered neuron
   useEffect(() => {
     const canvas = magCanvasRef.current;
@@ -117,13 +130,18 @@ export function FeatureMaps({ layers }: FeatureMapsProps) {
     ctx.clearRect(0, 0, FEATURE_MAP_MAGNIFIER_SIZE, FEATURE_MAP_MAGNIFIER_SIZE);
 
     const imgData = renderNeuronToImageData(firstLayer.weights[hoveredNeuron], FEATURE_MAP_MAGNIFIER_SIZE);
-    const offscreen = document.createElement('canvas');
-    offscreen.width = FEATURE_MAP_MAGNIFIER_SIZE;
-    offscreen.height = FEATURE_MAP_MAGNIFIER_SIZE;
-    const offCtx = offscreen.getContext('2d');
+
+    // Reuse single offscreen canvas for magnifier
+    if (!magOffscreenRef.current || magOffscreenRef.current.width !== FEATURE_MAP_MAGNIFIER_SIZE) {
+      magOffscreenRef.current = document.createElement('canvas');
+      magOffscreenRef.current.width = FEATURE_MAP_MAGNIFIER_SIZE;
+      magOffscreenRef.current.height = FEATURE_MAP_MAGNIFIER_SIZE;
+      magOffscreenCtxRef.current = magOffscreenRef.current.getContext('2d');
+    }
+    const offCtx = magOffscreenCtxRef.current;
     if (offCtx) {
       offCtx.putImageData(imgData, 0, 0);
-      ctx.drawImage(offscreen, 0, 0, FEATURE_MAP_MAGNIFIER_SIZE, FEATURE_MAP_MAGNIFIER_SIZE);
+      ctx.drawImage(magOffscreenRef.current!, 0, 0, FEATURE_MAP_MAGNIFIER_SIZE, FEATURE_MAP_MAGNIFIER_SIZE);
     }
 
     // Label
