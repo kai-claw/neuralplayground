@@ -1,11 +1,12 @@
 # 🧬 NeuralPlayground
 
-**Watch a neural network learn in real-time.** Draw digits, train networks, visualize every weight and activation, attack with adversarial noise, dream with gradient ascent — all in the browser. No TensorFlow, no ML libraries. Just pure TypeScript and math.
+**Watch a neural network learn in real-time.** Draw digits, train networks, visualize every weight and activation, attack with adversarial noise, dream with gradient ascent, ablate neurons, race architectures — all in the browser. No TensorFlow, no ML libraries. Just pure TypeScript and math.
 
 [![Live Demo](https://img.shields.io/badge/🚀_demo-live-brightgreen?style=for-the-badge)](https://kai-claw.github.io/neuralplayground/)
-[![Tests](https://img.shields.io/badge/tests-331_passing-brightgreen?style=for-the-badge)]()
-[![TypeScript](https://img.shields.io/badge/TypeScript-0_errors-blue?style=for-the-badge)]()
-[![Bundle](https://img.shields.io/badge/bundle-82.76KB_gzip-purple?style=for-the-badge)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict_0_errors-blue?style=for-the-badge)]()
+[![Tests](https://img.shields.io/badge/tests-680_passing-brightgreen?style=for-the-badge)]()
+[![Bundle](https://img.shields.io/badge/bundle-103.9KB_gzip-purple?style=for-the-badge)]()
+[![License](https://img.shields.io/badge/license-MIT-yellow?style=for-the-badge)]()
 
 <p align="center">
   <strong><a href="https://kai-claw.github.io/neuralplayground/">👉 Try the Live Demo</a></strong>
@@ -13,40 +14,50 @@
 
 ---
 
-## ✨ What Can You Do?
+## ✨ Features
 
-### 🎨 Draw & Predict
-Draw any digit (0–9) on the canvas. The network predicts in real-time, showing probability distributions across all 10 classes. Watch confidence shift as you draw each stroke.
+### Core Neural Network Engine
+| Feature | Description |
+|---------|-------------|
+| **Custom NN from Scratch** | Forward/backward pass, SGD, cross-entropy loss, Xavier init — zero ML libraries |
+| **Configurable Architecture** | 1–5 hidden layers, 8–256 neurons each, ReLU/Sigmoid/Tanh activations |
+| **Real-time Training** | Watch loss decrease and accuracy climb with live dual-axis charts |
+| **Procedural Digit Data** | Stroke-based digit generation (no MNIST download needed) |
 
-### 🧠 See the Network Think
-A full topology visualization shows every neuron and weighted connection. Color-coded signal flow particles animate through the network when you make a prediction, showing data flowing from input to output.
+### Visualization & Interaction
+| Feature | Description |
+|---------|-------------|
+| **Network Topology** | Full graph of neurons + weighted connections with color-coded signal flow particles |
+| **Drawing Canvas** | Touch/mouse digit input with live prediction probability bars |
+| **Feature Maps** | First-layer 28×28 weight heatmaps — see edge/curve detectors emerge |
+| **Weight Heatmaps** | Per-layer weight matrices with diverging colormap + layer tabs |
+| **Activation Bars** | Per-layer activation magnitudes showing signal strength |
+| **Saliency Maps** | Input-gradient highlighting — which pixels matter most? |
+| **Activation Space** | PCA-projected hidden representations — watch digit clusters form |
+| **Confusion Matrix** | NxN prediction error grid — where does the network confuse digits? |
+| **Gradient Flow Monitor** | Per-layer gradient magnitudes — detect vanishing/exploding gradients |
 
-### 🔬 Feature Maps — What Neurons See
-Peer inside the first hidden layer. Each neuron's learned 28×28 weight pattern is rendered as a heatmap, revealing the edge detectors, curve recognizers, and stroke patterns the network has discovered on its own.
+### Labs & Experiments
+| Feature | Description |
+|---------|-------------|
+| **Adversarial Noise Lab** | Gaussian, salt-pepper, and targeted noise — watch confidence crumble |
+| **Digit Morphing** | Blend between two drawn digits, watch the decision boundary in real-time |
+| **Network Dreams** | Gradient ascent from random noise — see what the network "imagines" each digit looks like |
+| **Neuron Surgery** | Freeze or kill individual neurons, watch the network compensate or break |
+| **Training Race** | Pit two architectures against each other — shallow vs. deep, narrow vs. wide |
+| **Chimera Lab** | Gradient ascent toward *two* digits simultaneously — hybrid dream creatures |
+| **Ablation Lab** | Systematic per-neuron knockout study — identify critical vs. redundant neurons |
+| **Weight Evolution** | Filmstrip of weight snapshots across epochs — watch features crystallize |
+| **Epoch Replay** | Training time machine — scrub through weight history and replay learning |
+| **Decision Boundary** | 2D PCA projection showing how the network carves up input space |
+| **Misfit Gallery** | Curated gallery of the network's worst predictions — learn from failure |
 
-### 🎭 Adversarial Noise Lab
-Attack the network. Apply gaussian blur, salt-and-pepper static, or targeted adversarial noise to your drawing and watch confidence crumble — or hold. Explore the fragility and resilience of neural networks.
-
-### 🔀 Digit Morphing
-Draw two different digits, then blend between them with a slider. Watch the prediction smoothly shift as the input transitions — revealing decision boundaries in real-time.
-
-### 🎬 Cinematic Demo Mode
-Sit back. The demo auto-draws all 10 digits with realistic stroke animations, training the network through a full cycle. Perfect for presentations or just watching a network come alive.
-
-### 💭 Network Dreams — Gradient Ascent Visualization
-Run the network *backwards*. Starting from random noise, gradient ascent reveals what the network "imagines" each digit looks like — its platonic ideal of a 0, 1, 2, etc. Eerie, beautiful, and deeply informative.
-
-### 🔧 Neuron Surgery
-Freeze or kill individual neurons and watch the network compensate — or break. Toggle neurons on and off to understand which ones are critical and which are redundant. Live experimentation with network architecture.
-
-### 🏁 Training Race
-Pit two network architectures against each other in a side-by-side training race. Compare shallow vs. deep, narrow vs. wide, ReLU vs. Sigmoid. Choose from presets or build custom configurations. See which converges faster and which generalizes better.
-
-### 📊 Full Training Dashboard
-- **Dual-axis loss/accuracy chart** with real-time updates
-- **Per-layer activation magnitudes** showing signal strength through the network
-- **Weight heatmaps** with layer switching — see the actual learned parameters
-- **Prediction probability bars** for all 10 digits with confidence-reactive glow
+### Experience Modes
+| Feature | Description |
+|---------|-------------|
+| **Cinematic Demo** | Auto-draws all 10 digits with stroke animations + full training cycle |
+| **Auto-start Training** | Trains 15 epochs on first load for instant visual impact |
+| **Adaptive Performance** | Auto-degrades heavy features at low FPS, auto-recovers when stable |
 
 ---
 
@@ -57,7 +68,7 @@ Pit two network architectures against each other in a side-by-side training race
 | `Space` | Train / Pause training |
 | `R` | Reset network weights |
 | `D` | Start cinematic demo |
-| `H` | Toggle help panel |
+| `H` | Toggle help overlay |
 | `Esc` | Close panel / Stop demo |
 
 ---
@@ -66,45 +77,102 @@ Pit two network architectures against each other in a side-by-side training race
 
 ```
 src/
-├── nn/                          # Neural network engine (pure logic, 0 React imports)
-│   ├── NeuralNetwork.ts         # Forward/backward pass, training, prediction
-│   └── sampleData.ts            # Procedural digit generation, canvasToInput
-├── hooks/                       # React state management (4 hooks)
-│   ├── useNeuralNetwork.ts      # Training loop, snapshot state
-│   ├── useCinematic.ts          # Demo mode state machine
-│   ├── useContainerDims.ts      # Responsive ResizeObserver
-│   └── useTrainingRace.ts       # Side-by-side race controller
-├── components/                  # UI layer (16 components, Canvas-based rendering)
-│   ├── NetworkVisualizer.tsx     # Network topology + signal flow particles
-│   ├── DrawingCanvas.tsx         # Touch/mouse digit drawing (forwardRef)
-│   ├── LossChart.tsx             # Dual-axis training progress chart
-│   ├── ActivationVisualizer.tsx  # Per-layer activation bars
-│   ├── PredictionBar.tsx         # 0-9 probability distribution
-│   ├── ControlPanel.tsx          # Training controls + architecture config
-│   ├── WeightPanel.tsx           # Weight heatmap with layer tabs
-│   ├── WeightHeatmap.tsx         # Color-coded weight matrix renderer
-│   ├── FeatureMaps.tsx           # First-layer weight visualization
-│   ├── AdversarialLab.tsx        # Noise lab (gaussian/salt-pepper/targeted)
-│   ├── DigitMorph.tsx            # Digit blending lab
-│   ├── NetworkDreams.tsx         # Gradient ascent dream visualization
-│   ├── NeuronSurgery.tsx         # Freeze/kill neuron interface
-│   ├── TrainingRace.tsx          # Side-by-side architecture comparison
-│   ├── CinematicBadge.tsx        # Demo mode status badge
-│   └── ErrorBoundary.tsx         # Crash recovery with retry
-├── data/
-│   └── digitStrokes.ts           # Cinematic auto-draw stroke sequences
-├── App.tsx                       # Root orchestrator (hooks → components)
-├── constants.ts                  # All magic numbers centralized (103 LOC)
-├── types.ts                      # Shared TypeScript types
-├── utils.ts                      # Pure math (activation, softmax, argmax, RNG)
-├── noise.ts                      # Noise generation (gaussian, salt-pepper, targeted)
-├── rendering.ts                  # Canvas rendering utilities
-└── visualizer.ts                 # Network visualization helpers
+├── nn/                              # Neural network engine (pure TS, 0 React imports)
+│   ├── NeuralNetwork.ts        471  # Forward/backward pass, training, prediction, surgery
+│   ├── sampleData.ts           116  # Procedural digit generation, canvasToInput
+│   ├── dreams.ts                76  # Gradient ascent dream generation
+│   ├── saliency.ts             39   # Input-gradient saliency computation
+│   ├── noise.ts                 47  # Gaussian, salt-pepper, targeted noise
+│   ├── ablation.ts              74  # Per-neuron knockout study
+│   ├── chimera.ts               54  # Multi-digit hybrid dream generation
+│   ├── confusion.ts             22  # Confusion matrix computation
+│   ├── decisionBoundary.ts    265   # PCA-based decision boundary mapping
+│   ├── epochReplay.ts          66   # Weight snapshot recording for replay
+│   ├── gradientFlow.ts        213   # Per-layer gradient magnitude tracking
+│   ├── misfits.ts               46  # Worst-prediction finder
+│   ├── pca.ts                  107  # Principal component analysis
+│   ├── weightEvolution.ts       87  # Epoch-by-epoch weight filmstrip recorder
+│   └── index.ts                 18  # Barrel export
+│
+├── hooks/                           # React state management (6 hooks)
+│   ├── useNeuralNetwork.ts     176  # Training loop, snapshot state, dream/saliency
+│   ├── useCinematic.ts         202  # Demo mode state machine
+│   ├── useActivationSpace.ts   138  # PCA-projected activation cloud
+│   ├── useTrainingRace.ts      136  # Side-by-side architecture race controller
+│   ├── usePerformanceMonitor.ts 78  # FPS tracking + adaptive degradation
+│   ├── useContainerDims.ts      43  # Responsive ResizeObserver
+│   └── index.ts                  7  # Barrel export
+│
+├── components/                      # UI layer (29 components, Canvas-based rendering)
+│   ├── NetworkVisualizer.tsx   363  # Topology graph + signal flow particles
+│   ├── DrawingCanvas.tsx       224  # Touch/mouse digit drawing (forwardRef)
+│   ├── LossChart.tsx           192  # Dual-axis loss/accuracy chart
+│   ├── ActivationVisualizer.tsx 91  # Per-layer activation bar chart
+│   ├── PredictionBar.tsx        53  # 0–9 probability distribution bars
+│   ├── ControlPanel.tsx        145  # Training controls + architecture config
+│   ├── WeightPanel.tsx         105  # Weight heatmap with layer tabs
+│   ├── WeightHeatmap.tsx        95  # Color-coded weight matrix renderer
+│   ├── FeatureMaps.tsx         240  # First-layer weight tile grid + magnifier
+│   ├── AdversarialLab.tsx      246  # Noise attack lab
+│   ├── DigitMorph.tsx          196  # Digit blending with slider
+│   ├── NetworkDreams.tsx       237  # Gradient ascent dream viewer
+│   ├── NeuronSurgery.tsx       163  # Freeze/kill neuron interface
+│   ├── TrainingRace.tsx        173  # Side-by-side architecture race
+│   ├── SaliencyMap.tsx         161  # Input-gradient heatmap
+│   ├── ActivationSpace.tsx     285  # PCA activation cloud scatter
+│   ├── ConfusionMatrix.tsx     165  # NxN prediction error grid
+│   ├── GradientFlowMonitor.tsx 158  # Per-layer gradient health bars
+│   ├── EpochReplay.tsx         403  # Training time machine + weight scrubber
+│   ├── DecisionBoundary.tsx    316  # 2D input space partition map
+│   ├── ChimeraLab.tsx          264  # Multi-digit hybrid dream lab
+│   ├── MisfitGallery.tsx       296  # Worst-prediction gallery
+│   ├── WeightEvolution.tsx     315  # Epoch filmstrip + playback
+│   ├── AblationLab.tsx         251  # Per-neuron knockout importance map
+│   ├── StatsPanel.tsx           45  # Epoch/loss/accuracy stats
+│   ├── HelpOverlay.tsx          49  # Keyboard shortcuts dialog
+│   ├── ExperiencePanel.tsx      33  # Cinematic toggle
+│   ├── CinematicBadge.tsx       28  # Demo mode status badge
+│   ├── ErrorBoundary.tsx        45  # Crash recovery with retry
+│   └── index.ts                 30  # Barrel export
+│
+├── renderers/                       # Canvas rendering utilities (pure functions)
+│   ├── pixelRendering.ts       106  # Pixel/weight ImageData generation
+│   ├── confusionRenderer.ts    133  # Confusion matrix canvas painting
+│   ├── dreamRenderer.ts        165  # Dream/chimera canvas rendering
+│   ├── gradientFlowRenderer.ts 228  # Gradient health bar chart rendering
+│   ├── raceChart.ts            163  # Race comparison chart rendering
+│   ├── surgeryRenderer.ts      224  # Surgery topology canvas rendering
+│   └── index.ts                  8  # Barrel export
+│
+├── visualizers/                     # Layout computation (pure math)
+│   ├── networkLayout.ts         65  # Network topology positioning
+│   └── index.ts                  2  # Barrel export
+│
+├── utils/                           # Shared utilities
+│   ├── math.ts                  75  # Softmax, argmax, RNG, helpers
+│   ├── activations.ts           24  # ReLU, sigmoid, tanh + derivatives
+│   ├── colors.ts                15  # Diverging colormap helpers
+│   ├── prng.ts                  32  # Seeded mulberry32 PRNG
+│   └── index.ts                  6  # Barrel export
+│
+├── data/                            # Static data
+│   ├── digitStrokes.ts         147  # Cinematic auto-draw stroke paths
+│   └── racePresets.ts           80  # Architecture presets for Training Race
+│
+├── App.tsx                     442  # Root orchestrator (hooks → components)
+├── App.css                    4486  # All styles (animations, responsive, reduced-motion)
+├── constants.ts                188  # Centralized magic numbers + configs
+├── types.ts                    127  # Shared TypeScript interfaces
+├── main.tsx                      8  # Entry point
+└── index.css                     1  # CSS reset
 ```
 
 **Data flow** (unidirectional): `nn/` → `hooks/` → `App.tsx` → `components/`
 
-**Prediction pipeline**: `DrawingCanvas(ImageData)` → `canvasToInput(28×28)` → `NeuralNetwork.predict()` → `{label, probabilities, layers}` → UI components
+**Module discipline**:
+- `nn/` and `renderers/` have **zero React imports** — pure computation
+- `utils/` files have **no internal cross-dependencies**
+- Barrel exports at every directory level for clean imports
 
 ---
 
@@ -112,13 +180,32 @@ src/
 
 | Layer | Technology |
 |-------|-----------|
-| **Framework** | React 19 + TypeScript (strict mode) |
+| **Framework** | React 19 + TypeScript 5.9 (strict mode) |
 | **Rendering** | HTML5 Canvas (zero DOM-per-neuron) |
-| **NN Engine** | Custom from-scratch (forward/backward pass, SGD, cross-entropy, Xavier init) |
+| **NN Engine** | Custom from-scratch (forward/backward, SGD, cross-entropy, Xavier init) |
 | **Build** | Vite 7 |
-| **Testing** | Vitest 4 (331 tests across 6 suites) |
-| **Deployment** | GitHub Pages via gh-pages |
-| **Dependencies** | React + React DOM only. No ML libraries. |
+| **Testing** | Vitest 4 (680 tests across 14 suites) |
+| **Deployment** | GitHub Pages via gh-pages + GitHub Actions CI/CD |
+| **Dependencies** | React + React DOM only. **No ML libraries.** |
+
+---
+
+## 🧪 ML Concepts Demonstrated
+
+| Concept | Where |
+|---------|-------|
+| **Backpropagation** | Custom gradient computation through every layer |
+| **Xavier Initialization** | Weight scaling proportional to layer fan-in |
+| **Cross-Entropy Loss** | Softmax output with log-likelihood loss |
+| **Activation Functions** | ReLU, Sigmoid, Tanh — selectable per layer, with derivative computation |
+| **Gradient Ascent** | Network Dreams + Chimera Lab — maximize class probability from noise |
+| **Saliency Maps** | Input-gradient highlighting of salient pixels |
+| **PCA Projection** | 2D visualization of high-dimensional activation space |
+| **Adversarial Examples** | Targeted noise pushing predictions toward a chosen class |
+| **Ablation Studies** | Systematic neuron knockout measuring per-neuron importance |
+| **Decision Boundaries** | PCA-projected input space partition visualization |
+| **Confusion Matrices** | NxN classification error analysis |
+| **Feature Visualization** | First-layer weight grids revealing learned edge/curve detectors |
 
 ---
 
@@ -126,17 +213,20 @@ src/
 
 | Metric | Value |
 |--------|-------|
-| Source files | 31 |
-| Source LOC | ~5,100 |
-| Test LOC | ~3,500 |
-| CSS LOC | ~2,650 |
-| Tests | 331 (6 suites) |
+| Source files | 75 |
+| Source LOC | ~11,300 |
+| Test LOC | ~7,600 |
+| CSS LOC | ~4,500 |
+| Tests | 680 (14 suites) |
 | TypeScript errors | 0 |
+| `as any` casts | 0 |
 | Build warnings | 0 |
-| Bundle JS | 266 KB (82.76 KB gzip) |
-| Bundle CSS | 41 KB (7.78 KB gzip) |
-| Components | 16 |
-| Hooks | 4 |
+| Bundle JS | 335 KB (103.9 KB gzip) |
+| Bundle CSS | 69 KB (11.9 KB gzip) |
+| Components | 29 |
+| Hooks | 6 |
+| NN modules | 15 |
+| Renderers | 7 |
 | External deps | React + ReactDOM only |
 
 ---
@@ -154,7 +244,7 @@ npm install
 # Development (hot reload)
 npm run dev
 
-# Run all 331 tests
+# Run all 680 tests
 npm test
 
 # Production build
@@ -168,38 +258,38 @@ npm run deploy
 
 ## ♿ Accessibility
 
-- Full **ARIA labels** on all interactive elements
-- **Keyboard navigation** — all features accessible without mouse
+- Full **ARIA labels** on all 29 interactive components
+- **Keyboard navigation** — all features accessible without mouse (Space/R/D/H/Esc)
 - **`prefers-reduced-motion`** — all animations respect system settings
 - **Skip links** and semantic HTML structure
 - **Error boundary** with retry and reload options
+- **Screen reader announcements** for training state changes
+- **Focus-visible** outlines with glow on all interactive elements
 - **Noscript fallback** for JS-disabled browsers
 
 ---
 
 ## 🎩 Development Process — Six Thinking Hats (10 Passes)
 
-This project was built through 10 structured passes using Edward de Bono's **Six Thinking Hats** methodology. Each pass applied a different cognitive lens:
+This project was built through 10 structured iteration passes using Edward de Bono's **Six Thinking Hats** methodology:
 
 | Pass | Hat | Focus | Key Deliverables |
 |------|-----|-------|-----------------|
-| 1 | ⚪ White | Facts & Audit | CI/CD, SEO, PWA manifest, 60 tests |
-| 2 | ⚫ Black | Risks & Problems | NaN guards, error boundary, ARIA, keyboard shortcuts, 39 tests |
-| 3 | 🟢 Green | Creative Features | Signal flow, cinematic demo, morphing, feature maps, adversarial lab, 22 tests |
-| 4 | 🟡 Yellow | Polish & Delight | Auto-start training, heartbeat, spring animations, slide-ins |
-| 5 | 🔴 Red | Feel & Intuition | Confidence glow, warm accents, hover depth, vignette overlays |
-| 6 | 🔵 Blue | Process & Summary | 129 structural tests, architecture audit, README/AUDIT docs |
-| 7 | 🟢 Green #2 | Creative Features | Network Dreams, Neuron Surgery, Training Race, 51 tests |
-| 8 | ⚫ Black #2 | Re-Audit | Memory leak fix, render stability, cleanup verification, 30 tests |
-| 9 | 🔴 Red #2 | Final Polish | Ambient gradients, entrance animations, micro-interactions |
-| 10 | ⚪ White #2 | Final Verification | Build verification, showcase docs, cleanup, deploy |
+| 1 | ⚪ White | Facts & Audit | CI/CD, SEO, PWA manifest, 60 baseline tests |
+| 2 | ⚫ Black | Risks & Problems | NaN guards, error boundary, ARIA, mobile responsive, 39 edge-case tests |
+| 3 | 🟢 Green | Creative Features | Feature maps, adversarial lab, signal flow, cinematic demo, digit morph |
+| 4 | 🟡 Yellow | Polish & Delight | Auto-start training, heartbeat indicator, spring animations, slide-ins |
+| 5 | 🔴 Red | Feel & Intuition | Vignettes, confidence glow, warm accents, hover depth, stat color-coding |
+| 6 | 🔵 Blue | Architecture | Module extraction (3 components + 3 module renames), barrel exports, 48 arch tests |
+| 7 | 🟢 Green #2 | Creative Features | Weight evolution filmstrip, ablation lab, +46 tests |
+| 8 | ⚫ Black #2 | Stress Test | Integer-keyed masks, snapshot caching, scratch buffers, saliency LUT, adaptive perf, +29 tests |
+| 9 | 🟡 Yellow #2 | Final Polish | PWA raster icons, enhanced JSON-LD, 73 portfolio-readiness tests, instructions bar, sitemap |
+| 10 | ⚪ White #2 | Final Verification | *Coming next* |
 
-> **Test growth**: 0 → 60 → 99 → 121 → 121 → 121 → 250 → 301 → 331 → 331 → 331
-
-See [AUDIT.md](./AUDIT.md) for the complete journey with quantitative metrics and qualitative assessments at each stage.
+> **Test growth**: 0 → 60 → 99 → 121 → 121 → 121 → 472 → 578 → 607 → 680
 
 ---
 
 ## 📄 License
 
-MIT
+MIT — see [LICENSE](./LICENSE)

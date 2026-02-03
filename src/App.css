@@ -893,6 +893,19 @@ body {
   border-color: var(--accent-blue);
 }
 
+.footer-stats {
+  font-family: 'Inter', monospace;
+  font-size: 11px;
+  color: var(--accent-green, #10b981);
+  letter-spacing: 0.2px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.footer-stats:hover {
+  opacity: 1;
+}
+
 .app-footer a {
   color: var(--accent-blue);
   text-decoration: none;
