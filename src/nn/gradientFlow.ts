@@ -35,8 +35,10 @@ export interface GradientFlowSnapshot {
 }
 
 // Pre-allocated scratch arrays for gradient flow measurement (avoid per-call GC)
-let _scratchDeltas: number[] | null = null;
-let _scratchNewDeltas: number[] | null = null;
+// Uses ping-pong pattern: two buffers alternate as read/write targets
+// to prevent self-clobbering when deltas aliases the write buffer.
+let _scratchA: number[] | null = null;
+let _scratchB: number[] | null = null;
 
 /**
  * Measure gradient magnitudes through the network by backpropagating
@@ -55,16 +57,18 @@ export function measureGradientFlow(
   const numLayers = layers.length;
   const masks = network.getNeuronMasks();
 
-  // Compute output deltas (reuse scratch arrays to avoid per-call allocation)
+  // Compute output deltas using scratch buffer A
   const outputLayer = layers[numLayers - 1];
   const outputSize = outputLayer.activations.length;
-  if (!_scratchDeltas || _scratchDeltas.length < outputSize) {
-    _scratchDeltas = new Array(outputSize);
+  if (!_scratchA || _scratchA.length < outputSize) {
+    _scratchA = new Array(outputSize);
   }
   for (let i = 0; i < outputSize; i++) {
-    _scratchDeltas[i] = outputLayer.activations[i] - (i === targetLabel ? 1 : 0);
+    _scratchA[i] = outputLayer.activations[i] - (i === targetLabel ? 1 : 0);
   }
-  let deltas: number[] = _scratchDeltas;
+  let deltas: number[] = _scratchA;
+  // Track which buffer deltas currently points to so we write into the OTHER one
+  let deltasIsA = true;
 
   const layerStats: LayerGradientStats[] = [];
 
@@ -102,14 +106,19 @@ export function measureGradientFlow(
       count: totalCount,
     });
 
-    // Backpropagate deltas to previous layer (reuse scratch array)
+    // Backpropagate deltas to previous layer (ping-pong scratch buffers
+    // to prevent self-clobbering when deltas aliases the write target)
     if (l > 0) {
       const prevLayer = layers[l - 1];
       const activation = config.layers[l - 1]?.activation || 'relu';
       const prevSize = prevLayer.weights.length;
-      if (!_scratchNewDeltas || _scratchNewDeltas.length < prevSize) {
-        _scratchNewDeltas = new Array(prevSize);
+      // Always write into the buffer that deltas is NOT reading from
+      if (deltasIsA) {
+        if (!_scratchB || _scratchB.length < prevSize) _scratchB = new Array(prevSize);
+      } else {
+        if (!_scratchA || _scratchA.length < prevSize) _scratchA = new Array(prevSize);
       }
+      const target = deltasIsA ? _scratchB! : _scratchA!;
       for (let i = 0; i < prevSize; i++) {
         let sum = 0;
         for (let j = 0; j < layer.weights.length; j++) {
@@ -119,9 +128,10 @@ export function measureGradientFlow(
           prevLayer.preActivations[i],
           activation as ActivationFn,
         );
-        _scratchNewDeltas[i] = isFinite(d) ? d : 0;
+        target[i] = isFinite(d) ? d : 0;
       }
-      deltas = _scratchNewDeltas;
+      deltas = target;
+      deltasIsA = !deltasIsA;
     }
   }
 
