@@ -68,6 +68,9 @@ export default function SaliencyMap({
   hasTrained,
 }: SaliencyMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Reuse offscreen canvas across renders (avoid createElement every time)
+  const offscreenRef = useRef<HTMLCanvasElement | null>(null);
+  const offscreenCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const [topPixels, setTopPixels] = useState<number>(0);
 
   // Render the overlay
@@ -85,13 +88,17 @@ export default function SaliencyMap({
     ctx.clearRect(0, 0, size, size);
 
     const imageData = renderSaliencyOverlay(currentInput, saliency, size);
-    const offscreen = document.createElement('canvas');
-    offscreen.width = size;
-    offscreen.height = size;
-    const offCtx = offscreen.getContext('2d');
+    // Reuse offscreen canvas (avoids document.createElement per render)
+    if (!offscreenRef.current || offscreenRef.current.width !== size) {
+      offscreenRef.current = document.createElement('canvas');
+      offscreenRef.current.width = size;
+      offscreenRef.current.height = size;
+      offscreenCtxRef.current = offscreenRef.current.getContext('2d');
+    }
+    const offCtx = offscreenCtxRef.current;
     if (offCtx) {
       offCtx.putImageData(imageData, 0, 0);
-      ctx.drawImage(offscreen, 0, 0, size, size);
+      ctx.drawImage(offscreenRef.current!, 0, 0, size, size);
     }
 
     // Count "hot" pixels (above threshold) as percentage

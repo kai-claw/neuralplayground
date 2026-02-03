@@ -27,6 +27,25 @@ export interface ConfusionData {
   classCounts: number[];
 }
 
+// Cached training data per sample count (avoids regenerating 150+ samples per call)
+const _trainingDataCache = new Map<number, { inputs: number[][]; labels: number[] }>();
+
+function getCachedTrainingData(samplesPerDigit: number) {
+  let cached = _trainingDataCache.get(samplesPerDigit);
+  if (!cached) {
+    cached = generateTrainingData(samplesPerDigit);
+    _trainingDataCache.set(samplesPerDigit, cached);
+  }
+  return cached;
+}
+
+// Pre-allocated matrix rows (reuse across calls)
+const _matrixRows: number[][] = Array.from({ length: 10 }, () => new Array(10).fill(0));
+const _classCounts = new Array(10).fill(0);
+const _precision = new Array(10).fill(0);
+const _recall = new Array(10).fill(0);
+const _f1 = new Array(10).fill(0);
+
 /**
  * Build a confusion matrix by running all training samples through the network.
  */
@@ -34,9 +53,14 @@ export function computeConfusionMatrix(
   network: NeuralNetwork,
   samplesPerDigit = 20,
 ): ConfusionData {
-  const data = generateTrainingData(samplesPerDigit);
-  const matrix: number[][] = Array.from({ length: 10 }, () => new Array(10).fill(0));
-  const classCounts = new Array(10).fill(0);
+  const data = getCachedTrainingData(samplesPerDigit);
+
+  // Zero the pre-allocated matrix instead of allocating new arrays
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 10; c++) _matrixRows[r][c] = 0;
+    _classCounts[r] = 0;
+  }
+  const matrix = _matrixRows;
   let correct = 0;
 
   for (let i = 0; i < data.inputs.length; i++) {
@@ -44,17 +68,17 @@ export function computeConfusionMatrix(
     const predicted = argmax(output);
     const actual = data.labels[i];
     matrix[actual][predicted]++;
-    classCounts[actual]++;
+    _classCounts[actual]++;
     if (predicted === actual) correct++;
   }
 
   const total = data.inputs.length;
   const accuracy = total > 0 ? correct / total : 0;
 
-  // Precision, recall, F1 per class
-  const precision = new Array(10).fill(0);
-  const recall = new Array(10).fill(0);
-  const f1 = new Array(10).fill(0);
+  // Alias pre-allocated metric arrays
+  const precision = _precision;
+  const recall = _recall;
+  const f1 = _f1;
 
   for (let c = 0; c < 10; c++) {
     // Precision: TP / (TP + FP) — column sum
@@ -72,5 +96,5 @@ export function computeConfusionMatrix(
     f1[c] = pr > 0 ? (2 * precision[c] * recall[c]) / pr : 0;
   }
 
-  return { matrix, total, accuracy, precision, recall, f1, classCounts };
+  return { matrix, total, accuracy, precision, recall, f1, classCounts: _classCounts };
 }

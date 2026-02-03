@@ -16,8 +16,10 @@ const PIXEL_COUNT = INPUT_DIM * INPUT_DIM;
 /**
  * Generate a reproducible noise pattern for the given type and seed.
  *
- * Returns a Float32Array of length 784 (28×28).
+ * Returns a new Float32Array of length 784 (28×28).
  * Values represent the raw noise signal before amplitude scaling.
+ * Callers (AdversarialLab) store and reference the pattern across renders,
+ * so each call must return an owned buffer.
  */
 export function generateNoisePattern(
   type: NoiseType,
@@ -65,6 +67,9 @@ export function generateNoisePattern(
 
 // ─── Noise application ───────────────────────────────────────────────
 
+// Pre-allocated noised output buffer
+let _noisedBuf: number[] = [];
+
 /**
  * Apply a noise pattern to a clean input at the given noise level.
  *
@@ -83,7 +88,9 @@ export function applyNoise(
   seed: number,
 ): number[] {
   const len = Math.min(input.length, PIXEL_COUNT);
-  const noised = new Array<number>(len);
+  // Reuse output buffer (avoids Array allocation per call)
+  if (_noisedBuf.length !== len) _noisedBuf = new Array<number>(len);
+  const noised = _noisedBuf;
 
   if (type === 'salt-pepper') {
     const rng = mulberry32(seed);

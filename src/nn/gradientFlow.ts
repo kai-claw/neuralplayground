@@ -34,6 +34,10 @@ export interface GradientFlowSnapshot {
   epoch: number;
 }
 
+// Pre-allocated scratch arrays for gradient flow measurement (avoid per-call GC)
+let _scratchDeltas: number[] | null = null;
+let _scratchNewDeltas: number[] | null = null;
+
 /**
  * Measure gradient magnitudes through the network by backpropagating
  * a sample input and capturing weight gradient magnitudes per layer.
@@ -51,11 +55,16 @@ export function measureGradientFlow(
   const numLayers = layers.length;
   const masks = network.getNeuronMasks();
 
-  // Compute output deltas
+  // Compute output deltas (reuse scratch arrays to avoid per-call allocation)
   const outputLayer = layers[numLayers - 1];
-  const target = new Array(10).fill(0);
-  target[targetLabel] = 1;
-  let deltas: number[] = outputLayer.activations.map((a, i) => a - target[i]);
+  const outputSize = outputLayer.activations.length;
+  if (!_scratchDeltas || _scratchDeltas.length < outputSize) {
+    _scratchDeltas = new Array(outputSize);
+  }
+  for (let i = 0; i < outputSize; i++) {
+    _scratchDeltas[i] = outputLayer.activations[i] - (i === targetLabel ? 1 : 0);
+  }
+  let deltas: number[] = _scratchDeltas;
 
   const layerStats: LayerGradientStats[] = [];
 
@@ -93,12 +102,15 @@ export function measureGradientFlow(
       count: totalCount,
     });
 
-    // Backpropagate deltas to previous layer
+    // Backpropagate deltas to previous layer (reuse scratch array)
     if (l > 0) {
       const prevLayer = layers[l - 1];
       const activation = config.layers[l - 1]?.activation || 'relu';
-      const newDeltas = new Array(prevLayer.weights.length).fill(0);
-      for (let i = 0; i < prevLayer.weights.length; i++) {
+      const prevSize = prevLayer.weights.length;
+      if (!_scratchNewDeltas || _scratchNewDeltas.length < prevSize) {
+        _scratchNewDeltas = new Array(prevSize);
+      }
+      for (let i = 0; i < prevSize; i++) {
         let sum = 0;
         for (let j = 0; j < layer.weights.length; j++) {
           sum += layer.weights[j][i] * deltas[j];
@@ -107,20 +119,26 @@ export function measureGradientFlow(
           prevLayer.preActivations[i],
           activation as ActivationFn,
         );
-        newDeltas[i] = isFinite(d) ? d : 0;
+        _scratchNewDeltas[i] = isFinite(d) ? d : 0;
       }
-      deltas = newDeltas;
+      deltas = _scratchNewDeltas;
     }
   }
 
   // Reverse so index 0 = first hidden layer
   layerStats.reverse();
 
-  // Determine overall health
-  const meanGrads = layerStats.map(s => s.meanAbsGrad);
-  const minMean = Math.min(...meanGrads);
-  const maxMean = Math.max(...meanGrads);
-  const avgDead = layerStats.reduce((s, l) => s + l.deadFraction, 0) / layerStats.length;
+  // Determine overall health (manual min/max — safe for any layer count)
+  let minMean = Infinity;
+  let maxMean = -Infinity;
+  let deadSum = 0;
+  for (let i = 0; i < layerStats.length; i++) {
+    const mg = layerStats[i].meanAbsGrad;
+    if (mg < minMean) minMean = mg;
+    if (mg > maxMean) maxMean = mg;
+    deadSum += layerStats[i].deadFraction;
+  }
+  const avgDead = layerStats.length > 0 ? deadSum / layerStats.length : 0;
 
   let health: GradientFlowSnapshot['health'] = 'healthy';
   if (maxMean > 10 || (maxMean > 0 && maxMean / (minMean || 1e-10) > 1000)) {
@@ -156,15 +174,28 @@ export class GradientFlowHistory {
     if (this.size < this.capacity) this.size++;
   }
 
-  /** Return snapshots in chronological order */
+  // Pre-allocated ordered view (avoids spread+slice per call)
+  private _orderedView: GradientFlowSnapshot[] = [];
+
+  /** Return snapshots in chronological order (shared array — do not mutate) */
   getAll(): GradientFlowSnapshot[] {
     if (this.size < this.capacity) {
-      return this.buffer.slice(0, this.size);
+      // Sub-capacity: just return a slice (allocated once, reused via length check)
+      if (this._orderedView.length !== this.size) {
+        this._orderedView = this.buffer.slice(0, this.size);
+      } else {
+        for (let i = 0; i < this.size; i++) this._orderedView[i] = this.buffer[i];
+      }
+      return this._orderedView;
     }
-    return [
-      ...this.buffer.slice(this.index),
-      ...this.buffer.slice(0, this.index),
-    ];
+    // At capacity: build ordered view in-place
+    if (this._orderedView.length !== this.capacity) {
+      this._orderedView = new Array(this.capacity);
+    }
+    for (let i = 0; i < this.capacity; i++) {
+      this._orderedView[i] = this.buffer[(this.index + i) % this.capacity];
+    }
+    return this._orderedView;
   }
 
   getLatest(): GradientFlowSnapshot | null {

@@ -76,30 +76,40 @@ export function findMisfits(
   labels: number[],
   count: number = 24,
 ): Misfit[] {
-  const results: Misfit[] = [];
+  // Two-pass approach: first compute losses to find top-N, then only copy
+  // probabilities for those (avoids O(n) array spreads for all samples)
+  const losses: { idx: number; loss: number }[] = new Array(inputs.length);
 
   for (let i = 0; i < inputs.length; i++) {
     const output = network.forward(inputs[i]);
-    const predicted = argmax(output);
     const trueConf = output[labels[i]];
-    // Cross-entropy loss: -log(p(true))
     const loss = -Math.log(Math.max(trueConf, 1e-10));
-
-    results.push({
-      input: inputs[i],
-      trueLabel: labels[i],
-      predictedLabel: predicted,
-      confidence: output[predicted],
-      trueConfidence: trueConf,
-      loss: isFinite(loss) ? loss : 20, // cap degenerate values
-      isWrong: predicted !== labels[i],
-      probabilities: [...output],
-    });
+    losses[i] = { idx: i, loss: isFinite(loss) ? loss : 20 };
   }
 
-  // Sort by loss descending (hardest first)
-  results.sort((a, b) => b.loss - a.loss);
-  return results.slice(0, count);
+  // Sort by loss descending (hardest first) and take top count
+  losses.sort((a, b) => b.loss - a.loss);
+  const topCount = Math.min(count, losses.length);
+  const results: Misfit[] = new Array(topCount);
+
+  for (let i = 0; i < topCount; i++) {
+    const { idx, loss } = losses[i];
+    // Re-run forward for this sample to get full probabilities
+    const output = network.forward(inputs[idx]);
+    const predicted = argmax(output);
+    results[i] = {
+      input: inputs[idx],
+      trueLabel: labels[idx],
+      predictedLabel: predicted,
+      confidence: output[predicted],
+      trueConfidence: output[labels[idx]],
+      loss,
+      isWrong: predicted !== labels[idx],
+      probabilities: output.slice(),
+    };
+  }
+
+  return results;
 }
 
 /**

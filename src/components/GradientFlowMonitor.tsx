@@ -27,9 +27,10 @@ interface Props {
   networkRef: React.RefObject<NeuralNetwork | null>;
   epoch: number;
   layers: { weights: number[][] }[] | null;
+  isTraining?: boolean;
 }
 
-export function GradientFlowMonitor({ networkRef, epoch, layers }: Props) {
+export function GradientFlowMonitor({ networkRef, epoch, layers, isTraining }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const historyRef = useRef(new GradientFlowHistory(100));
   const [snapshot, setSnapshot] = useState<GradientFlowSnapshot | null>(null);
@@ -41,12 +42,16 @@ export function GradientFlowMonitor({ networkRef, epoch, layers }: Props) {
     sampleRef.current = generateTrainingData(GRADIENT_FLOW_SAMPLE_COUNT);
   }
 
-  // Measure gradient flow when epoch changes
+  // Measure gradient flow when epoch changes.
+  // Throttled to every 5 epochs during training to reduce CPU load
+  // (each measurement runs a full forward+backward pass).
   useEffect(() => {
     if (!networkRef.current || epoch === 0) {
       setSnapshot(null);
       return;
     }
+    // During active training, sample every 5 epochs instead of every epoch
+    if (isTraining && epoch % 5 !== 0) return;
 
     // Use first sample for gradient measurement
     const sample = sampleRef.current!;
@@ -56,7 +61,7 @@ export function GradientFlowMonitor({ networkRef, epoch, layers }: Props) {
     const snap = measureGradientFlow(networkRef.current, input, label);
     historyRef.current.push(snap);
     setSnapshot(snap);
-  }, [epoch, networkRef]);
+  }, [epoch, isTraining, networkRef]);
 
   // Clear history on reset
   useEffect(() => {

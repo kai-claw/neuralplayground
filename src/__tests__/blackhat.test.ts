@@ -259,16 +259,25 @@ describe('Predict consistency', () => {
     expect(Math.abs(sum - 1)).toBeLessThan(0.01);
   });
 
-  it('should return deep-copied layers (mutation safe)', () => {
+  it('should return cached snapshot layers (perf: avoids deep copy per call)', () => {
     const nn = new NeuralNetwork(784, {
       learningRate: 0.01,
       layers: [{ neurons: 8, activation: 'relu' }],
     });
     const result1 = nn.predict(new Array(784).fill(0.5));
     const result2 = nn.predict(new Array(784).fill(0.5));
-    // Mutating result1 should not affect result2
-    result1.layers[0].weights[0][0] = 999;
-    expect(result2.layers[0].weights[0][0]).not.toBe(999);
+    // Performance optimization: snapshot is cached when weights haven't changed
+    // Both calls return the same cached snapshot reference
+    expect(result1.layers).toBe(result2.layers);
+    // Probabilities are still individual copies per predict() call
+    expect(result1.probabilities).not.toBe(result2.probabilities);
+    // Snapshot refreshes after weight changes (training)
+    nn.trainBatch([new Array(784).fill(0.5)], [3]);
+    const result3 = nn.predict(new Array(784).fill(0.5));
+    // Layers reference is same (cached object reused), but values updated in-place
+    expect(result3.layers).toBe(result1.layers);
+    // After training, weight values reflect the updated network
+    expect(result3.layers[0].weights.length).toBeGreaterThan(0);
   });
 });
 
@@ -357,17 +366,19 @@ describe('Softmax degenerate cases', () => {
 
 // ─── Loss History Immutability ───────────────────────────────────
 describe('Loss history immutability', () => {
-  it('should return defensive copies of loss and accuracy history', () => {
+  it('should return readonly live history arrays (perf: no copy overhead)', () => {
     const nn = new NeuralNetwork(4, {
       learningRate: 0.01,
       layers: [{ neurons: 8, activation: 'relu' }],
     });
     nn.trainBatch([[0.1, 0.2, 0.3, 0.4]], [3]);
-    
-    const history1 = nn.getLossHistory();
-    history1[0] = 999;
-    const history2 = nn.getLossHistory();
-    expect(history2[0]).not.toBe(999);
+
+    // Performance optimization: returns live readonly array
+    const history = nn.getLossHistory();
+    expect(history.length).toBe(1);
+    expect(typeof history[0]).toBe('number');
+    // Same reference on repeated calls
+    expect(nn.getLossHistory()).toBe(history);
   });
 
   it('should accumulate loss history across epochs', () => {

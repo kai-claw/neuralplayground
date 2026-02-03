@@ -13,11 +13,18 @@ export interface DrawingCanvasHandle {
   getImageData: () => ImageData | null;
 }
 
+/** Minimum ms between prediction callbacks during continuous drawing.
+ *  ~33ms = 30fps prediction rate (drawing is still 60fps visually). */
+const PREDICT_THROTTLE_MS = 33;
+
 export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
   function DrawingCanvas({ onDraw, size = 280 }, ref) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const isDrawingRef = useRef(false);
     const lastPosRef = useRef<{ x: number; y: number } | null>(null);
+    // Throttle prediction callbacks during fast drawing to reduce CPU load
+    const lastPredictTimeRef = useRef(0);
+    const pendingPredictRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
       const canvas = canvasRef.current;
@@ -96,6 +103,21 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       };
     }, [size]);
 
+    /** Fire throttled prediction callback — always fires on stroke end via flush. */
+    const firePrediction = useCallback(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      lastPredictTimeRef.current = performance.now();
+      if (pendingPredictRef.current) {
+        clearTimeout(pendingPredictRef.current);
+        pendingPredictRef.current = null;
+      }
+      const imageData = ctx.getImageData(0, 0, size, size);
+      onDraw(imageData);
+    }, [onDraw, size]);
+
     const draw = useCallback((x: number, y: number) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -120,9 +142,17 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       }
 
       lastPosRef.current = { x, y };
-      const imageData = ctx.getImageData(0, 0, size, size);
-      onDraw(imageData);
-    }, [onDraw, size]);
+
+      // Throttle prediction: fire immediately if enough time has passed,
+      // otherwise schedule a trailing fire so the last stroke position always predicts
+      const now = performance.now();
+      if (now - lastPredictTimeRef.current >= PREDICT_THROTTLE_MS) {
+        firePrediction();
+      } else if (!pendingPredictRef.current) {
+        const remaining = PREDICT_THROTTLE_MS - (now - lastPredictTimeRef.current);
+        pendingPredictRef.current = setTimeout(firePrediction, remaining);
+      }
+    }, [firePrediction]);
 
     const handleStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
       e.preventDefault();
@@ -142,7 +172,13 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const handleEnd = useCallback(() => {
       isDrawingRef.current = false;
       lastPosRef.current = null;
-    }, []);
+      // Flush any pending throttled prediction on stroke end
+      if (pendingPredictRef.current) {
+        clearTimeout(pendingPredictRef.current);
+        pendingPredictRef.current = null;
+      }
+      firePrediction();
+    }, [firePrediction]);
 
     const clear = useCallback(() => {
       const canvas = canvasRef.current;

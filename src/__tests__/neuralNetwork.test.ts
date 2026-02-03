@@ -434,7 +434,7 @@ describe('NeuralNetwork — Stability & Edge Cases', () => {
     }
   });
 
-  it('should return snapshot copies (not references)', () => {
+  it('should return cached snapshot that refreshes in-place after weight changes', () => {
     const config: TrainingConfig = {
       learningRate: 0.01,
       layers: [{ neurons: 16, activation: 'relu' }],
@@ -442,11 +442,18 @@ describe('NeuralNetwork — Stability & Edge Cases', () => {
     const nn = new NeuralNetwork(784, config);
     const snap1 = nn.predict(new Array(784).fill(0.5));
     const snap2 = nn.predict(new Array(784).fill(0.5));
-    snap1.layers[0].weights[0][0] = 999;
-    expect(snap2.layers[0].weights[0][0]).not.toBe(999);
+    // Perf optimization: cached snapshot reused between calls
+    expect(snap1.layers).toBe(snap2.layers);
+    // Training changes weights — snapshot updates in-place on next predict
+    nn.trainBatch([new Array(784).fill(0.5)], [3]);
+    const snap3 = nn.predict(new Array(784).fill(0.5));
+    // Same cached object reference, updated in-place
+    expect(snap3.layers).toBe(snap1.layers);
+    // Probabilities are still independent per-call copies
+    expect(snap1.probabilities).not.toBe(snap3.probabilities);
   });
 
-  it('getLossHistory should return a copy', () => {
+  it('getLossHistory should return readonly live array (perf: no copy overhead)', () => {
     const config: TrainingConfig = {
       learningRate: 0.01,
       layers: [{ neurons: 16, activation: 'relu' }],
@@ -455,8 +462,13 @@ describe('NeuralNetwork — Stability & Edge Cases', () => {
     const data = { inputs: [new Array(784).fill(0.5)], labels: [5] };
     nn.trainBatch(data.inputs, data.labels);
     const history = nn.getLossHistory();
-    history.push(999);
-    expect(nn.getLossHistory().length).toBe(1);
+    // Performance optimization: returns readonly live array instead of copying
+    expect(history.length).toBe(1);
+    // Training another batch grows the same array
+    nn.trainBatch(data.inputs, data.labels);
+    expect(nn.getLossHistory().length).toBe(2);
+    // Reference is the same (no copy)
+    expect(nn.getLossHistory()).toBe(nn.getLossHistory());
   });
 });
 

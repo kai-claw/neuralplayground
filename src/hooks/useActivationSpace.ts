@@ -37,11 +37,14 @@ export function useActivationSpace(
     if (lastHiddenIdx < 0) return null;
 
     // Forward-pass all samples and collect last hidden activations
-    const activations: number[][] = [];
+    // Pre-allocate array to avoid dynamic growth
+    const totalWithUser = inputs.length + (currentInput ? 1 : 0);
+    const allData: number[][] = new Array(totalWithUser);
     for (let i = 0; i < inputs.length; i++) {
       net.forward(inputs[i]);
       const snap = net.getLayers();
-      activations.push([...snap[lastHiddenIdx].activations]);
+      // Copy activations (forward() returns live array that gets overwritten)
+      allData[i] = snap[lastHiddenIdx].activations.slice();
     }
 
     // Also project the user's drawn digit if present
@@ -49,19 +52,15 @@ export function useActivationSpace(
     if (currentInput) {
       net.forward(currentInput);
       const snap = net.getLayers();
-      userActivations = [...snap[lastHiddenIdx].activations];
+      userActivations = snap[lastHiddenIdx].activations.slice();
+      allData[inputs.length] = userActivations;
     }
-
-    // PCA projection
-    const allData = userActivations
-      ? [...activations, userActivations]
-      : activations;
     const { points } = projectTo2D(allData);
 
     const userProjection = userActivations ? points[points.length - 1] : null;
 
     return {
-      points: points.slice(0, activations.length),
+      points: points.slice(0, inputs.length),
       labels,
       userProjection,
     };

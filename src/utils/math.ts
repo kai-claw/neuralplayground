@@ -23,15 +23,27 @@ export function argmax(arr: number[]): number {
   return maxIdx;
 }
 
-/** Numerically stable softmax with degenerate fallback */
+// Pre-allocated softmax buffer (avoids 3× array allocation per call)
+let _softmaxBuf: number[] = [];
+
+/** Numerically stable softmax with degenerate fallback.
+ *  NOTE: Returns a shared buffer. Callers must consume or copy before the next call. */
 export function softmax(arr: number[]): number[] {
+  const len = arr.length;
+  if (_softmaxBuf.length < len) _softmaxBuf = new Array(len);
   const max = safeMax(arr);
-  const exps = arr.map(x => Math.exp(x - max));
-  const sum = exps.reduce((a, b) => a + b, 0);
-  if (sum === 0 || !isFinite(sum)) {
-    return arr.map(() => 1 / arr.length);
+  let sum = 0;
+  for (let i = 0; i < len; i++) {
+    _softmaxBuf[i] = Math.exp(arr[i] - max);
+    sum += _softmaxBuf[i];
   }
-  return exps.map(x => x / sum);
+  if (sum === 0 || !isFinite(sum)) {
+    const uniform = 1 / len;
+    for (let i = 0; i < len; i++) _softmaxBuf[i] = uniform;
+  } else {
+    for (let i = 0; i < len; i++) _softmaxBuf[i] /= sum;
+  }
+  return _softmaxBuf;
 }
 
 /** Xavier/Glorot weight initialization (Box-Muller normal) */

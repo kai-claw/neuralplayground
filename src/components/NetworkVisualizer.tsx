@@ -46,6 +46,8 @@ export function NetworkVisualizer({
   const lastTriggerRef = useRef(0);
   // Store node glow state for arrival effects
   const nodeGlowRef = useRef<Map<string, number>>(new Map());
+  // Note: DPR is read from window.devicePixelRatio at render time
+  // (not cached — it can change on monitor switch/zoom)
 
   const { width, height } = dims;
 
@@ -285,6 +287,21 @@ export function NetworkVisualizer({
     // Cancel any existing animation
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
+    // Pre-size the canvas ONCE before animation loop starts
+    // (avoids backing store reallocation + context state reset every frame)
+    {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const dpr = window.devicePixelRatio || 1;
+        const targetW = width * dpr;
+        const targetH = height * dpr;
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
+      }
+    }
+
     const animate = (now: number) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -292,9 +309,8 @@ export function NetworkVisualizer({
       if (!ctx) return;
 
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx.scale(dpr, dpr);
+      // Reset transform and clear without reallocating backing store
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
 
       // Draw static network

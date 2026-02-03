@@ -102,6 +102,10 @@ export const SHORTCUTS = [
 
 export const TRAINING_STEP_INTERVAL = 60; // ms between training steps
 
+// ─── Training history limits ─────────────────────────────────────────
+
+export const HISTORY_MAX_LENGTH = 2000; // thin out oldest entries when exceeded
+
 // ─── Neuron Surgery ──────────────────────────────────────────────────
 
 export const SURGERY_NODE_RADIUS = 8;

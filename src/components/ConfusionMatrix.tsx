@@ -28,17 +28,23 @@ export function ConfusionMatrix({ networkRef, epoch, isTraining }: Props) {
   const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null);
   const [confusionData, setConfusionData] = useState<ConfusionData | null>(null);
 
-  // Recompute confusion matrix when epoch changes (throttled: every 5 epochs or on stop)
+  // Recompute confusion matrix when epoch changes (throttled: every 10 epochs during training)
   useEffect(() => {
     if (!networkRef.current || epoch === 0) {
       setConfusionData(null);
       return;
     }
-    // During training, update every 5 epochs. When stopped, always update.
-    if (isTraining && epoch % 5 !== 0) return;
+    // During training, update every 10 epochs (was 5 — each call runs 150 forward passes).
+    // When stopped, always update.
+    if (isTraining && epoch % 10 !== 0) return;
 
-    const data = computeConfusionMatrix(networkRef.current, CONFUSION_SAMPLES_PER_DIGIT);
-    setConfusionData(data);
+    // Defer computation to avoid blocking the training loop
+    const timer = setTimeout(() => {
+      if (!networkRef.current) return;
+      const data = computeConfusionMatrix(networkRef.current, CONFUSION_SAMPLES_PER_DIGIT);
+      setConfusionData(data);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [epoch, isTraining, networkRef]);
 
   // Draw

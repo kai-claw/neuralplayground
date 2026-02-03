@@ -54,28 +54,32 @@ export function weightsToImageData(
 
   const scale = size / INPUT_DIM;
 
-  for (let py = 0; py < size; py++) {
-    const sy = Math.min(Math.floor(py / scale), INPUT_DIM - 1);
-    for (let px = 0; px < size; px++) {
-      const sx = Math.min(Math.floor(px / scale), INPUT_DIM - 1);
-      const wi = sy * INPUT_DIM + sx;
-      // When all weights are identical (range=0), map based on sign:
-      // positive → 1.0 (cyan), negative → 0.0 (red), zero → 0.5 (neutral)
-      const norm = wi >= len ? 0.5
-        : range === 0 ? (wMax > 0 ? 1.0 : wMax < 0 ? 0.0 : 0.5)
-        : (weights[wi] - wMin) / range;
+  // Pre-compute zero-range fallback once
+  const zeroRangeNorm = range === 0 ? (wMax > 0 ? 1.0 : wMax < 0 ? 0.0 : 0.5) : 0;
+  const invRange = range > 0 ? 1 / range : 0;
 
-      const idx = (py * size + px) * 4;
+  for (let py = 0; py < size; py++) {
+    const sy = Math.min((py / scale) | 0, INPUT_DIM - 1);
+    const rowOff = sy * INPUT_DIM;
+    const pyOff = py * size;
+    for (let px = 0; px < size; px++) {
+      const sx = Math.min((px / scale) | 0, INPUT_DIM - 1);
+      const wi = rowOff + sx;
+      const norm = wi >= len ? 0.5
+        : range === 0 ? zeroRangeNorm
+        : (weights[wi] - wMin) * invRange;
+
+      const idx = (pyOff + px) << 2;
       if (norm >= 0.5) {
         const t = (norm - 0.5) * 2;
-        data[idx]     = Math.round(20 + t * 79);    // R
-        data[idx + 1] = Math.round(40 + t * 182);   // G
-        data[idx + 2] = Math.round(60 + t * 195);   // B
+        data[idx]     = (20 + t * 79 + 0.5) | 0;
+        data[idx + 1] = (40 + t * 182 + 0.5) | 0;
+        data[idx + 2] = (60 + t * 195 + 0.5) | 0;
       } else {
         const t = (0.5 - norm) * 2;
-        data[idx]     = Math.round(20 + t * 235);   // R
-        data[idx + 1] = Math.round(40 + t * 59);    // G
-        data[idx + 2] = Math.round(60 + t * 72);    // B
+        data[idx]     = (20 + t * 235 + 0.5) | 0;
+        data[idx + 1] = (40 + t * 59 + 0.5) | 0;
+        data[idx + 2] = (60 + t * 72 + 0.5) | 0;
       }
       data[idx + 3] = 255;
     }
@@ -117,11 +121,13 @@ export function pixelsToImageData(
   const scale = size / INPUT_DIM;
 
   for (let py = 0; py < size; py++) {
-    const sy = Math.min(Math.floor(py / scale), INPUT_DIM - 1);
+    const sy = Math.min((py / scale) | 0, INPUT_DIM - 1);
+    const rowOff = sy * INPUT_DIM;
+    const pyOff = py * size;
     for (let px = 0; px < size; px++) {
-      const sx = Math.min(Math.floor(px / scale), INPUT_DIM - 1);
-      const v = Math.round((pixels[sy * INPUT_DIM + sx] || 0) * 255);
-      const idx = (py * size + px) * 4;
+      const sx = Math.min((px / scale) | 0, INPUT_DIM - 1);
+      const v = ((pixels[rowOff + sx] || 0) * 255 + 0.5) | 0;
+      const idx = (pyOff + px) << 2;
       data[idx] = v;
       data[idx + 1] = v;
       data[idx + 2] = v;
@@ -134,8 +140,14 @@ export function pixelsToImageData(
 
 // ─── Pixel interpolation ─────────────────────────────────────────────
 
+// Pre-allocated lerp buffer (avoids 784-element array per call during morph animation)
+let _lerpBuffer: number[] = [];
+
 /**
  * Linearly interpolate between two pixel arrays.
+ *
+ * NOTE: Returns a shared buffer. Callers must consume immediately
+ * (e.g. pass to pixelsToImageData) before the next call.
  *
  * @param a  First pixel array (784 elements, [0, 1])
  * @param b  Second pixel array (784 elements, [0, 1])
@@ -143,10 +155,12 @@ export function pixelsToImageData(
  */
 export function lerpPixels(a: number[], b: number[], t: number): number[] {
   const len = Math.min(a.length, b.length);
-  const result = new Array<number>(len);
+  if (_lerpBuffer.length !== len) {
+    _lerpBuffer = new Array<number>(len);
+  }
   const oneMinusT = 1 - t;
   for (let i = 0; i < len; i++) {
-    result[i] = a[i] * oneMinusT + b[i] * t;
+    _lerpBuffer[i] = a[i] * oneMinusT + b[i] * t;
   }
-  return result;
+  return _lerpBuffer;
 }

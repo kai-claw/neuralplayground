@@ -32,15 +32,31 @@ export function usePerformanceMonitor(): PerformanceState {
 
   useEffect(() => {
     let running = true;
+    let visible = !document.hidden;
 
     const tick = () => {
       if (!running) return;
       frameCountRef.current++;
       rafRef.current = requestAnimationFrame(tick);
     };
+
+    // Pause rAF counting when tab is hidden (saves CPU in background)
+    const handleVisibility = () => {
+      visible = !document.hidden;
+      if (visible && running) {
+        // Reset counter on visibility restore to avoid false low FPS reading
+        frameCountRef.current = 0;
+        lastTimeRef.current = performance.now();
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
     rafRef.current = requestAnimationFrame(tick);
 
     const sampler = setInterval(() => {
+      if (!visible) return; // skip sampling when hidden
+
       const now = performance.now();
       const elapsed = (now - lastTimeRef.current) / 1000;
       const fps = elapsed > 0 ? Math.round(frameCountRef.current / elapsed) : 60;
@@ -74,6 +90,7 @@ export function usePerformanceMonitor(): PerformanceState {
       running = false;
       cancelAnimationFrame(rafRef.current);
       clearInterval(sampler);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 

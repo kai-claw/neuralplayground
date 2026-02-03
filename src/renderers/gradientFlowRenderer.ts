@@ -176,8 +176,11 @@ export function drawGradientFlow(
       values.push(sum / snap.layers.length);
     }
 
-    // Log-scale sparkline
-    const logVals = values.map(v => v > 0 ? Math.log10(v) : -10);
+    // Log-scale sparkline (in-place to avoid allocation)
+    const logVals = values;
+    for (let i = 0; i < values.length; i++) {
+      logVals[i] = values[i] > 0 ? Math.log10(values[i]) : -10;
+    }
     let minLog = logVals[0], maxLog = logVals[0];
     for (const v of logVals) {
       if (v < minLog) minLog = v;

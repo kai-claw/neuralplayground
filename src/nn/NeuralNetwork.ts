@@ -38,12 +38,19 @@ export class NeuralNetwork {
   private lossHistory: number[] = [];
   private accuracyHistory: number[] = [];
   private neuronMasks: Map<string, NeuronStatus> = new Map();
+  // Integer-keyed mask map for hot-path lookups (avoids string concat in inner loops)
+  private _intMasks: Map<number, NeuronStatus> = new Map();
+  /** Encode a (layer, neuron) pair as a single integer key.
+   *  Supports up to 10000 neurons per layer. */
+  private static _intKey(l: number, n: number): number { return l * 10000 + n; }
 
   // ─── Pre-allocated scratch arrays (avoid per-call GC) ───────────
   private _scratchTarget: number[] = new Array(10).fill(0);
   private _scratchDeltas: number[] = [];
   private _scratchNewDeltas: number[] = [];
   private _scratchIndices: number[] = [];
+  private _scratchPredictions: number[] = new Array(10).fill(0);
+  private _scratchOutputProbs: number[] = new Array(10).fill(0);
 
   constructor(inputSize: number, config: TrainingConfig) {
     this.config = config;
@@ -54,10 +61,13 @@ export class NeuralNetwork {
 
   setNeuronStatus(layerIdx: number, neuronIdx: number, status: NeuronStatus): void {
     const key = `${layerIdx}-${neuronIdx}`;
+    const intKey = NeuralNetwork._intKey(layerIdx, neuronIdx);
     if (status === 'active') {
       this.neuronMasks.delete(key);
+      this._intMasks.delete(intKey);
     } else {
       this.neuronMasks.set(key, status);
+      this._intMasks.set(intKey, status);
     }
   }
 
@@ -71,6 +81,7 @@ export class NeuralNetwork {
 
   clearAllMasks(): void {
     this.neuronMasks.clear();
+    this._intMasks.clear();
   }
 
   getConfig(): TrainingConfig {
@@ -130,6 +141,7 @@ export class NeuralNetwork {
       preActivations: new Array(10).fill(0),
       activations: new Array(10).fill(0),
     });
+    this._invalidateSnapshot();
   }
 
   // ─── Forward pass ────────────────────────────────────────────────
@@ -177,10 +189,11 @@ export class NeuralNetwork {
           for (let i = 0; i < numNeurons; i++) act[i] = uniform;
         }
       } else {
-        // Apply neuron surgery masks
-        if (this.neuronMasks.size > 0) {
+        // Apply neuron surgery masks (integer-keyed lookup — no string concat)
+        if (this._intMasks.size > 0) {
+          const layerBase = l * 10000;
           for (let j = 0; j < numNeurons; j++) {
-            if (this.neuronMasks.get(`${l}-${j}`) === 'killed') {
+            if (this._intMasks.get(layerBase + j) === 'killed') {
               act[j] = 0;
             }
           }
@@ -198,7 +211,7 @@ export class NeuralNetwork {
   private backward(input: number[], target: number[]): void {
     const lr = this.config.learningRate;
     const numLayers = this.layers.length;
-    const hasMasks = this.neuronMasks.size > 0;
+    const hasMasks = this._intMasks.size > 0;
     
     const outputLayer = this.layers[numLayers - 1];
     const outputSize = outputLayer.activations.length;
@@ -216,10 +229,11 @@ export class NeuralNetwork {
       const layer = this.layers[l];
       const prevActivations = l > 0 ? this.layers[l - 1].activations : input;
       const numNeurons = layer.weights.length;
+      const layerBase = l * 10000;
       
       for (let j = 0; j < numNeurons; j++) {
         if (hasMasks) {
-          const status = this.neuronMasks.get(`${l}-${j}`);
+          const status = this._intMasks.get(layerBase + j);
           if (status === 'frozen' || status === 'killed') continue;
         }
 
@@ -306,6 +320,7 @@ export class NeuralNetwork {
       this.backward(input, target);
     }
     
+    this._invalidateSnapshot();
     this.epoch++;
     const avgLoss = totalLoss / batchSize;
     const accuracy = correct / batchSize;
@@ -313,8 +328,18 @@ export class NeuralNetwork {
     this.accuracyHistory.push(accuracy);
 
     const bestIdx = argmax(lastProbs);
-    const predictions = new Array(lastProbs.length);
+    // Reuse predictions array (avoid allocation per batch)
+    if (this._scratchTarget.length < lastProbs.length) {
+      this._scratchPredictions = new Array(lastProbs.length);
+    }
+    const predictions = this._scratchPredictions;
     for (let i = 0; i < lastProbs.length; i++) predictions[i] = i === bestIdx ? 1 : 0;
+    
+    // Copy output probabilities into reusable buffer (avoid spread per batch)
+    if (this._scratchOutputProbs.length !== lastProbs.length) {
+      this._scratchOutputProbs = new Array(lastProbs.length);
+    }
+    for (let i = 0; i < lastProbs.length; i++) this._scratchOutputProbs[i] = lastProbs[i];
     
     return {
       epoch: this.epoch,
@@ -322,7 +347,7 @@ export class NeuralNetwork {
       accuracy,
       layers: this.snapshotLayers(),
       predictions,
-      outputProbabilities: [...lastProbs],
+      outputProbabilities: this._scratchOutputProbs,
     };
   }
 
@@ -331,23 +356,84 @@ export class NeuralNetwork {
   predict(input: number[]): { label: number; probabilities: number[]; layers: LayerState[] } {
     const output = this.forward(input);
     const label = argmax(output);
+    // Must allocate a fresh copy — callers compare results from multiple predict() calls
+    const probabilities = new Array(output.length);
+    for (let i = 0; i < output.length; i++) probabilities[i] = output[i];
     return {
       label,
-      probabilities: output.slice(), // copy — forward() returns a live array reference
+      probabilities,
       layers: this.snapshotLayers(),
     };
   }
 
   // ─── Snapshot helpers ────────────────────────────────────────────
 
-  /** Deep-copy all layers for safe external consumption */
+  // Pre-allocated snapshot cache — avoids deep-copy allocation per call
+  private _snapshotCache: LayerState[] = [];
+  private _snapshotDirty = true;
+
+  /** Mark snapshot stale (called after weight changes) */
+  private _invalidateSnapshot(): void {
+    this._snapshotDirty = true;
+  }
+
+  /** Deep-copy all layers for safe external consumption.
+   *  Caches result — repeated calls between weight changes reuse the same copy. */
   snapshotLayers(): LayerState[] {
-    return this.layers.map(l => ({
-      weights: l.weights.map(w => [...w]),
-      biases: [...l.biases],
-      preActivations: [...l.preActivations],
-      activations: [...l.activations],
-    }));
+    if (!this._snapshotDirty && this._snapshotCache.length === this.layers.length) {
+      return this._snapshotCache;
+    }
+
+    // Resize cache to match layer count
+    while (this._snapshotCache.length < this.layers.length) {
+      this._snapshotCache.push({
+        weights: [],
+        biases: [],
+        preActivations: [],
+        activations: [],
+      });
+    }
+    this._snapshotCache.length = this.layers.length;
+
+    for (let l = 0; l < this.layers.length; l++) {
+      const src = this.layers[l];
+      const dst = this._snapshotCache[l];
+
+      // Weights — deep copy (reuse inner arrays when dimensions match)
+      if (dst.weights.length !== src.weights.length) {
+        dst.weights = src.weights.map(w => [...w]);
+      } else {
+        for (let j = 0; j < src.weights.length; j++) {
+          const srcW = src.weights[j];
+          if (!dst.weights[j] || dst.weights[j].length !== srcW.length) {
+            dst.weights[j] = [...srcW];
+          } else {
+            const dstW = dst.weights[j];
+            for (let i = 0; i < srcW.length; i++) dstW[i] = srcW[i];
+          }
+        }
+      }
+
+      // Biases, preActivations, activations — copy into existing arrays
+      if (dst.biases.length !== src.biases.length) {
+        dst.biases = [...src.biases];
+      } else {
+        for (let i = 0; i < src.biases.length; i++) dst.biases[i] = src.biases[i];
+      }
+      if (dst.preActivations.length !== src.preActivations.length) {
+        dst.preActivations = [...src.preActivations];
+      } else {
+        for (let i = 0; i < src.preActivations.length; i++) dst.preActivations[i] = src.preActivations[i];
+      }
+      if (dst.activations.length !== src.activations.length) {
+        dst.activations = [...src.activations];
+      } else {
+        for (let i = 0; i < src.activations.length; i++) dst.activations[i] = src.activations[i];
+      }
+    }
+
+    this._snapshotDirty = false;
+    return this._snapshotCache;
   }
 
   // ─── Dream delegation (implementation in nn/dreams.ts) ──────────
@@ -368,8 +454,10 @@ export class NeuralNetwork {
 
   // ─── Accessors ───────────────────────────────────────────────────
 
-  getLossHistory(): number[] { return [...this.lossHistory]; }
-  getAccuracyHistory(): number[] { return [...this.accuracyHistory]; }
+  /** Returns the live history array. Callers must NOT mutate it. */
+  getLossHistory(): readonly number[] { return this.lossHistory; }
+  /** Returns the live history array. Callers must NOT mutate it. */
+  getAccuracyHistory(): readonly number[] { return this.accuracyHistory; }
   getEpoch(): number { return this.epoch; }
 
   reset(inputSize: number, config?: TrainingConfig) {

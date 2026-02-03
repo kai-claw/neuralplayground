@@ -87,19 +87,25 @@ function App() {
   // Adversarial lab — track current drawing as pixel array
   const [currentDrawingInput, setCurrentDrawingInput] = useState<number[] | null>(null);
 
-  // Saliency map — computed from current input + predicted label
+  // Saliency map — computed from current input + predicted label.
+  // Only recompute when the drawing or prediction changes, NOT on every epoch.
+  // During pure training (no drawing), this is a no-op.
   const saliencyData = useMemo(() => {
     if (!currentDrawingInput || predictedLabel === null || state.epoch === 0) return null;
     return computeSaliency(currentDrawingInput, predictedLabel);
-  }, [currentDrawingInput, predictedLabel, state.epoch, computeSaliency]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDrawingInput, predictedLabel, computeSaliency]);
 
   // ─── Record weight evolution on each epoch ───
+  // When performance is degraded, record every 3rd epoch to reduce allocation pressure
+  // (each frame allocates a Float32Array of ~50KB for 16-neuron networks)
   useEffect(() => {
     if (state.snapshot && state.epoch > 0) {
+      if (perfState.degraded && state.epoch % 3 !== 0) return;
       weightRecorderRef.current.record(state.snapshot);
       setWeightFrameTick(prev => prev + 1);
     }
-  }, [state.epoch, state.snapshot]);
+  }, [state.epoch, state.snapshot, perfState.degraded]);
 
   // ─── Activation space projection ───
   const activationProjection = useActivationSpace(networkRef, state.epoch, currentDrawingInput);
@@ -323,6 +329,7 @@ function App() {
         </div>
 
         {/* ─── Creative Features Row ─── */}
+        {/* When performance is degraded, skip heavy analysis components to reduce CPU load */}
         <div className="creative-features-row">
           <NeuronSurgery
             layers={displayLayers}
@@ -337,7 +344,7 @@ function App() {
             onDream={dream}
             hasTrained={state.epoch > 0}
           />
-          <TrainingRace />
+          {!perfState.degraded && <TrainingRace />}
           <ActivationSpace
             projection={activationProjection}
             epoch={state.epoch}
@@ -352,6 +359,7 @@ function App() {
             networkRef={networkRef}
             epoch={state.epoch}
             layers={displayLayers}
+            isTraining={state.isTraining}
           />
           <EpochReplay
             epoch={state.epoch}
@@ -360,28 +368,34 @@ function App() {
             currentInput={currentDrawingInput}
             activationFn={state.config.layers[0]?.activation || 'relu'}
           />
-          <DecisionBoundary
-            networkRef={networkRef}
-            epoch={state.epoch}
-            isTraining={state.isTraining}
-          />
+          {!perfState.degraded && (
+            <DecisionBoundary
+              networkRef={networkRef}
+              epoch={state.epoch}
+              isTraining={state.isTraining}
+            />
+          )}
           <ChimeraLab
             networkRef={networkRef}
             hasTrained={state.epoch > 0}
           />
-          <MisfitGallery
-            networkRef={networkRef}
-            epoch={state.epoch}
-            isTraining={state.isTraining}
-          />
+          {!perfState.degraded && (
+            <MisfitGallery
+              networkRef={networkRef}
+              epoch={state.epoch}
+              isTraining={state.isTraining}
+            />
+          )}
           <WeightEvolution
             frames={weightRecorderRef.current.getFrames()}
           />
-          <AblationLab
-            networkRef={networkRef}
-            epoch={state.epoch}
-            isTraining={state.isTraining}
-          />
+          {!perfState.degraded && (
+            <AblationLab
+              networkRef={networkRef}
+              epoch={state.epoch}
+              isTraining={state.isTraining}
+            />
+          )}
         </div>
       </main>
 

@@ -4,7 +4,7 @@ import { computeInputGradient, dream as networkDream } from '../nn/dreams';
 import { computeSaliency as _computeSaliency } from '../nn/saliency';
 import type { TrainingConfig, TrainingSnapshot, LayerConfig, NeuronStatus, DreamResult } from '../types';
 import { generateTrainingData } from '../nn/sampleData';
-import { DEFAULT_CONFIG, DEFAULT_SAMPLES_PER_DIGIT, TRAINING_STEP_INTERVAL } from '../constants';
+import { DEFAULT_CONFIG, DEFAULT_SAMPLES_PER_DIGIT, TRAINING_STEP_INTERVAL, HISTORY_MAX_LENGTH } from '../constants';
 
 export interface NetworkState {
   isTraining: boolean;
@@ -66,14 +66,32 @@ export function useNeuralNetwork() {
       if (!trainingRef.current || !networkRef.current) return;
       
       const snapshot = networkRef.current.trainBatch(data.inputs, data.labels);
-      
-      setState(prev => ({
-        ...prev,
-        snapshot,
-        lossHistory: networkRef.current!.getLossHistory(),
-        accuracyHistory: networkRef.current!.getAccuracyHistory(),
-        epoch: snapshot.epoch,
-      }));
+
+      // Append to history — push + length cap avoids O(n) concat allocation
+      // and prevents unbounded array growth during long training sessions
+      setState(prev => {
+        const nextLoss = prev.lossHistory;
+        const nextAcc = prev.accuracyHistory;
+        nextLoss.push(snapshot.loss);
+        nextAcc.push(snapshot.accuracy);
+        // Cap history length to prevent memory bloat (thin out oldest half when over limit)
+        if (nextLoss.length > HISTORY_MAX_LENGTH) {
+          const half = nextLoss.length >> 1;
+          for (let i = 0; i < half; i++) {
+            nextLoss[i] = nextLoss[i * 2];
+            nextAcc[i] = nextAcc[i * 2];
+          }
+          nextLoss.length = half;
+          nextAcc.length = half;
+        }
+        return {
+          ...prev,
+          snapshot,
+          lossHistory: nextLoss,
+          accuracyHistory: nextAcc,
+          epoch: snapshot.epoch,
+        };
+      });
       
       if (trainingRef.current) {
         timerRef.current = setTimeout(step, TRAINING_STEP_INTERVAL);
